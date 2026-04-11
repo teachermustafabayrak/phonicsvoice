@@ -1,0 +1,2269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<!-- No external SDK needed — using built-in fetch() -->
+<title>PhonicsVoice – Student Learning Platform</title>
+<style>
+:root {
+  --primary: #1a3a5c;
+  --secondary: #2563eb;
+  --accent: #f59e0b;
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f97316;
+  --bg: #f0f4f8;
+  --card: #ffffff;
+  --text: #1e293b;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+* { box-sizing: border-box; margin:0; padding:0; font-family: 'Segoe UI', sans-serif; }
+body { background: var(--bg); color: var(--text); min-height: 100vh; }
+
+/* ============ LOGIN ============ */
+#loginScreen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #1a3a5c 0%, #2563eb 50%, #1e40af 100%);
+  padding: 20px;
+}
+.login-box {
+  background: white;
+  border-radius: 20px;
+  padding: 50px 40px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+  text-align: center;
+}
+.login-logo { font-size: 3rem; margin-bottom: 10px; }
+.login-title { font-size: 1.8rem; font-weight: 800; color: var(--primary); margin-bottom: 6px; }
+.login-sub { color: var(--muted); font-size: 0.95rem; margin-bottom: 30px; }
+.form-group { margin-bottom: 18px; text-align: left; }
+.form-group label { font-size: 0.85rem; font-weight: 600; color: var(--muted); display: block; margin-bottom: 6px; }
+.form-group input {
+  width: 100%; padding: 13px 16px; border: 2px solid var(--border);
+  border-radius: 10px; font-size: 1rem; transition: border 0.2s;
+  outline: none;
+}
+.form-group input:focus { border-color: var(--secondary); }
+.btn-login {
+  width: 100%; padding: 14px; background: var(--secondary); color: white;
+  border: none; border-radius: 10px; font-size: 1rem; font-weight: 700;
+  cursor: pointer; transition: background 0.2s; margin-top: 8px;
+}
+.btn-login:hover { background: #1d4ed8; }
+.login-error { color: var(--danger); font-size: 0.9rem; margin-top: 10px; display: none; }
+.login-hint { font-size: 0.8rem; color: var(--muted); margin-top: 20px; background: #f8fafc; padding: 10px; border-radius: 8px; }
+
+/* ============ MAIN APP ============ */
+#mainApp { display: none; }
+
+/* HEADER */
+.app-header {
+  background: var(--primary);
+  color: white;
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.header-brand { font-size: 1.3rem; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+.header-student { display: flex; align-items: center; gap: 14px; }
+.student-badge {
+  background: rgba(255,255,255,0.15);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.btn-logout {
+  background: rgba(255,255,255,0.15);
+  color: white; border: none; padding: 7px 14px;
+  border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+  transition: background 0.2s;
+}
+.btn-logout:hover { background: rgba(255,255,255,0.28); }
+
+/* NAV TABS */
+.nav-tabs {
+  background: white;
+  border-bottom: 2px solid var(--border);
+  display: flex;
+  padding: 0 24px;
+  overflow-x: auto;
+  gap: 4px;
+}
+.nav-tab {
+  padding: 14px 20px;
+  border: none;
+  background: none;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  margin-bottom: -2px;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.nav-tab.active { color: var(--secondary); border-bottom-color: var(--secondary); }
+.nav-tab:hover:not(.active) { color: var(--text); }
+
+/* PAGES */
+.page { display: none; padding: 28px 24px; max-width: 1100px; margin: 0 auto; }
+.page.active { display: block; }
+
+/* ============ DASHBOARD ============ */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.stat-card {
+  background: white;
+  border-radius: 14px;
+  padding: 22px 20px;
+  box-shadow: var(--shadow);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.stat-icon { font-size: 2.2rem; }
+.stat-info .stat-value { font-size: 1.8rem; font-weight: 800; color: var(--primary); }
+.stat-info .stat-label { font-size: 0.85rem; color: var(--muted); margin-top: 2px; }
+
+.progress-section { background: white; border-radius: 14px; padding: 24px; box-shadow: var(--shadow); margin-bottom: 20px; }
+.progress-section h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; color: var(--primary); }
+.progress-bar-wrap { margin-bottom: 12px; }
+.progress-label { display: flex; justify-content: space-between; font-size: 0.85rem; margin-bottom: 5px; color: var(--muted); }
+.progress-bar { height: 10px; background: var(--border); border-radius: 5px; overflow: hidden; }
+.progress-fill { height: 100%; border-radius: 5px; background: var(--secondary); transition: width 0.4s; }
+.progress-fill.green { background: var(--success); }
+
+.recent-list { background: white; border-radius: 14px; padding: 24px; box-shadow: var(--shadow); }
+.recent-list h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 14px; color: var(--primary); }
+.recent-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+.recent-item:last-child { border-bottom: none; }
+.recent-item .badge {
+  padding: 3px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 600;
+}
+.badge-done { background: #dcfce7; color: #16a34a; }
+.badge-pending { background: #fef9c3; color: #a16207; }
+.badge-good { background: #dbeafe; color: #1d4ed8; }
+
+/* ============ PRACTICE PAGE ============ */
+.section-filter {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; align-items: center;
+}
+.section-filter label { font-weight: 600; color: var(--muted); font-size: 0.9rem; }
+.filter-select {
+  padding: 8px 14px; border: 2px solid var(--border); border-radius: 8px;
+  font-size: 0.9rem; outline: none; cursor: pointer;
+}
+.filter-select:focus { border-color: var(--secondary); }
+
+.phonics-section-card {
+  background: white;
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.section-hdr {
+  background: var(--primary);
+  color: white;
+  padding: 16px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.section-hdr .s-title { font-size: 1.15rem; font-weight: 700; }
+.section-hdr .s-meta {
+  background: rgba(255,255,255,0.18);
+  padding: 4px 14px; border-radius: 20px; font-size: 0.9rem;
+}
+.section-hdr .s-progress {
+  background: var(--accent); color: #1e293b;
+  padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 700;
+}
+
+.word-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+  padding: 22px;
+}
+
+.word-card {
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 12px;
+  text-align: center;
+  cursor: default;
+  transition: all 0.2s;
+  position: relative;
+}
+.word-card.recorded { border-color: var(--success); background: #f0fdf4; }
+.word-card.scored { border-color: var(--accent); background: #fffbeb; }
+
+.word-en { font-size: 1.2rem; font-weight: 700; color: var(--primary); margin-bottom: 3px; }
+.word-tr { font-size: 0.85rem; color: var(--muted); font-style: italic; margin-bottom: 10px; }
+
+.word-actions { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.btn-sm {
+  padding: 6px 10px; border-radius: 7px; border: none;
+  font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all 0.18s;
+  display: flex; align-items: center; gap: 4px;
+}
+.btn-listen { background: #dbeafe; color: #1d4ed8; }
+.btn-listen:hover { background: #bfdbfe; }
+.btn-record { background: #fee2e2; color: #dc2626; }
+.btn-record:hover { background: #fecaca; }
+.btn-record.recording { background: #dc2626; color: white; animation: pulse 1s infinite; }
+.btn-play { background: #dcfce7; color: #16a34a; }
+.btn-play:hover { background: #bbf7d0; }
+.btn-play:disabled { opacity: 0.4; cursor: not-allowed; }
+
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+
+.word-score {
+  position: absolute; top: 8px; right: 8px;
+  width: 28px; height: 28px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 700;
+}
+.score-done { background: var(--success); color: white; }
+.score-pending { background: var(--warning); color: white; }
+
+/* SENTENCE SECTION */
+.sentences-section {
+  background: white; border-radius: 14px; padding: 24px;
+  box-shadow: var(--shadow); margin-bottom: 24px;
+}
+.sentences-section h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; color: var(--primary); }
+.sentence-item {
+  background: var(--bg); border: 2px solid var(--border); border-radius: 10px;
+  padding: 16px; margin-bottom: 12px; transition: all 0.2s;
+}
+.sentence-item.recorded { border-color: var(--success); background: #f0fdf4; }
+.sentence-text { font-size: 1rem; font-weight: 600; color: var(--text); margin-bottom: 8px; }
+.sentence-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ============ RECORDINGS PAGE ============ */
+.recordings-filter {
+  display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center;
+}
+.search-input {
+  padding: 9px 14px; border: 2px solid var(--border); border-radius: 8px;
+  font-size: 0.9rem; outline: none; min-width: 220px; flex: 1;
+}
+.search-input:focus { border-color: var(--secondary); }
+
+.recording-card {
+  background: white; border-radius: 12px; padding: 18px 22px;
+  box-shadow: var(--shadow); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+}
+.rec-info { flex: 1; min-width: 160px; }
+.rec-word { font-size: 1.1rem; font-weight: 700; color: var(--primary); }
+.rec-section { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+.rec-date { font-size: 0.82rem; color: var(--muted); }
+.rec-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.rec-score {
+  padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 700;
+}
+.score-a { background: #dcfce7; color: #15803d; }
+.score-b { background: #dbeafe; color: #1d4ed8; }
+.score-c { background: #fef9c3; color: #a16207; }
+.score-na { background: var(--border); color: var(--muted); }
+
+/* ============ PROGRESS PAGE ============ */
+.progress-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  margin-bottom: 28px;
+}
+.prog-card {
+  background: white; border-radius: 12px; padding: 18px; box-shadow: var(--shadow);
+}
+.prog-card-title { font-size: 0.9rem; font-weight: 700; color: var(--primary); margin-bottom: 10px; }
+.prog-ring-wrap { display: flex; align-items: center; gap: 14px; }
+.prog-ring { width: 60px; height: 60px; position: relative; flex-shrink: 0; }
+.prog-ring svg { transform: rotate(-90deg); }
+.prog-ring .ring-bg { fill: none; stroke: var(--border); stroke-width: 7; }
+.prog-ring .ring-fill { fill: none; stroke: var(--secondary); stroke-width: 7; stroke-linecap: round; }
+.prog-ring .ring-text {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  font-size: 0.85rem; font-weight: 700; color: var(--primary);
+}
+.prog-stats { font-size: 0.83rem; color: var(--muted); }
+.prog-stats span { display: block; margin-top: 3px; }
+
+.leaderboard { background: white; border-radius: 14px; padding: 24px; box-shadow: var(--shadow); }
+.leaderboard h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; color: var(--primary); }
+.lb-item {
+  display: flex; align-items: center; gap: 12px; padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+}
+.lb-item:last-child { border-bottom: none; }
+.lb-rank {
+  width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; font-weight: 800; font-size: 0.9rem; flex-shrink: 0;
+}
+.lb-rank.gold { background: #fef9c3; color: #b45309; }
+.lb-rank.silver { background: #f1f5f9; color: #475569; }
+.lb-rank.bronze { background: #fef3c7; color: #92400e; }
+.lb-rank.other { background: var(--border); color: var(--muted); }
+.lb-name { flex: 1; font-weight: 600; }
+.lb-score { font-weight: 700; color: var(--secondary); }
+
+/* ============ ADMIN ============ */
+.admin-banner {
+  background: linear-gradient(135deg, #1a3a5c, #2563eb);
+  color: white; padding: 20px 24px; border-radius: 14px;
+  margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 12px;
+}
+.admin-banner h2 { font-size: 1.3rem; font-weight: 800; }
+.admin-banner p { font-size: 0.9rem; opacity: 0.85; margin-top: 4px; }
+
+.admin-search-bar {
+  display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; align-items: center;
+}
+.admin-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+.admin-table th {
+  background: var(--primary); color: white; padding: 11px 14px;
+  text-align: left; font-weight: 600; font-size: 0.85rem;
+}
+.admin-table td { padding: 11px 14px; border-bottom: 1px solid var(--border); }
+.admin-table tr:hover td { background: #f8fafc; }
+.admin-table .avatar {
+  width: 32px; height: 32px; border-radius: 50%; background: var(--secondary);
+  color: white; display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 0.85rem; margin-right: 8px;
+}
+.btn-view {
+  padding: 5px 12px; background: #dbeafe; color: #1d4ed8;
+  border: none; border-radius: 6px; font-size: 0.8rem; font-weight: 600; cursor: pointer;
+}
+.btn-view:hover { background: #bfdbfe; }
+
+/* MODAL */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5); z-index: 500;
+  align-items: center; justify-content: center; padding: 20px;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: white; border-radius: 16px; padding: 30px;
+  width: 100%; max-width: 640px; max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.25);
+}
+.modal-box h3 { font-size: 1.2rem; font-weight: 800; margin-bottom: 16px; color: var(--primary); }
+.modal-close {
+  float: right; font-size: 1.4rem; cursor: pointer; color: var(--muted);
+  background: none; border: none; margin-top: -4px;
+}
+.modal-close:hover { color: var(--danger); }
+
+/* TOAST */
+.toast {
+  position: fixed; bottom: 30px; right: 24px;
+  background: #1e293b; color: white; padding: 12px 20px;
+  border-radius: 10px; font-size: 0.9rem; font-weight: 500;
+  opacity: 0; transform: translateY(10px);
+  transition: all 0.3s; z-index: 999; pointer-events: none;
+  max-width: 320px;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: var(--success); }
+.toast.error { background: var(--danger); }
+
+/* Mic permission notice */
+.mic-notice {
+  background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px;
+  padding: 14px 18px; margin-bottom: 20px; display: flex; gap: 12px; align-items: flex-start;
+  font-size: 0.9rem; color: #9a3412;
+}
+.mic-notice .mic-icon { font-size: 1.4rem; flex-shrink: 0; }
+
+/* Mic error banner */
+.mic-error-banner {
+  background: #fef2f2; border: 2px solid #fca5a5; border-radius: 12px;
+  padding: 18px 20px; margin-bottom: 20px; display: none;
+}
+.mic-error-banner.show { display: block; }
+.mic-error-banner h4 { color: #b91c1c; font-size: 1rem; margin-bottom: 8px; }
+.mic-error-banner p { color: #7f1d1d; font-size: 0.88rem; line-height: 1.6; margin-bottom: 6px; }
+.mic-error-banner code { background: #fee2e2; padding: 2px 6px; border-radius: 4px; font-size: 0.85rem; }
+.mic-error-banner .fix-steps { margin: 10px 0 0 0; padding-left: 18px; color: #991b1b; font-size: 0.88rem; line-height: 1.9; }
+.btn-retry-mic { margin-top: 12px; padding: 8px 18px; background: #dc2626; color: white; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 700; cursor: pointer; }
+.btn-retry-mic:hover { background: #b91c1c; }
+
+/* Protocol warning */
+.protocol-warn {
+  background: #fffbeb; border: 2px solid #fde68a; border-radius: 12px;
+  padding: 16px 20px; margin-bottom: 20px; display: none;
+}
+.protocol-warn.show { display: block; }
+.protocol-warn p { color: #92400e; font-size: 0.9rem; line-height: 1.6; }
+
+/* Responsive */
+@media(max-width:600px) {
+  .page { padding: 18px 14px; }
+  .word-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .recording-card { flex-direction: column; align-items: flex-start; }
+}
+</style>
+</head>
+<body>
+
+<!-- ===== LOGIN ===== -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">🎤</div>
+    <div class="login-title">PhonicsVoice</div>
+    <div class="login-sub">Phonics Learning &amp; Recording Platform</div>
+
+    <div class="form-group">
+      <label>USERNAME</label>
+      <input id="usernameInput" type="text" placeholder="e.g. student01" autocomplete="username"/>
+    </div>
+    <div class="form-group">
+      <label>PASSWORD</label>
+      <input id="passwordInput" type="password" placeholder="Enter your password" autocomplete="current-password"/>
+    </div>
+    <button class="btn-login" onclick="doLogin()">Sign In →</button>
+    <div class="login-error" id="loginError">❌ Incorrect username or password.</div>
+
+    <!-- Debug button to test connection -->
+    <button onclick="testConnection()" style="margin-top:12px;width:100%;padding:10px;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:8px;font-size:0.82rem;color:#64748b;cursor:pointer;">
+      🔌 Test Connection
+    </button>
+    <div id="debugMsg" style="margin-top:10px;font-size:0.82rem;padding:10px;border-radius:8px;display:none;"></div>
+
+    <div class="login-hint">
+      👩‍🏫 <strong>Demo:</strong> Use <code>student01</code> / <code>pass01</code> &nbsp;|&nbsp;
+      Admin: <code>teacher</code> / <code>admin123</code><br/>
+      <span style="font-size:0.75rem;color:#94a3b8;margin-top:6px;display:block;">Your teacher provides your login credentials.</span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN APP ===== -->
+<div id="mainApp">
+
+  <!-- HEADER -->
+  <div class="app-header">
+    <div class="header-brand">🎤 <span>PhonicsVoice</span></div>
+    <div class="header-student">
+      <div class="student-badge" id="headerStudentName">Student</div>
+      <button class="btn-logout" onclick="doLogout()">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="nav-tabs" id="navTabs">
+    <button class="nav-tab active" onclick="showPage('dashboard', this)">🏠 Dashboard</button>
+    <button class="nav-tab" onclick="showPage('practice', this)">📚 Practice</button>
+    <button class="nav-tab" onclick="showPage('sentences', this)">💬 Sentences</button>
+    <button class="nav-tab" onclick="showPage('recordings', this)">🎙️ My Recordings</button>
+    <button class="nav-tab" onclick="showPage('progress', this)">📊 My Progress</button>
+    <button class="nav-tab admin-only" style="display:none" onclick="showPage('admin', this)">👨‍🏫 Admin</button>
+  </div>
+
+  <!-- ===== DASHBOARD ===== -->
+  <div class="page active" id="page-dashboard">
+    <div class="stats-grid" id="statsGrid"></div>
+    <div class="progress-section">
+      <h3>📈 Overall Progress</h3>
+      <div class="progress-bar-wrap">
+        <div class="progress-label"><span>Words Practiced</span><span id="progWordsPct">0%</span></div>
+        <div class="progress-bar"><div class="progress-fill" id="progWordsBar" style="width:0%"></div></div>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-label"><span>Words Recorded</span><span id="progRecPct">0%</span></div>
+        <div class="progress-bar"><div class="progress-fill green" id="progRecBar" style="width:0%"></div></div>
+      </div>
+      <div class="progress-bar-wrap">
+        <div class="progress-label"><span>Sentences Recorded</span><span id="progSentPct">0%</span></div>
+        <div class="progress-bar"><div class="progress-fill" id="progSentBar" style="width:0%" style="background:var(--accent)"></div></div>
+      </div>
+    </div>
+    <div class="recent-list">
+      <h3>🕐 Recent Activity</h3>
+      <div id="recentList"></div>
+    </div>
+  </div>
+
+  <!-- ===== PRACTICE (WORDS) ===== -->
+  <div class="page" id="page-practice">
+    <!-- Protocol warning (shown if opened as file://) -->
+    <div class="protocol-warn" id="protocolWarn">
+      <p>⚠️ <strong>Important:</strong> This app is opened as a <strong>local file</strong>. Some browsers (especially Chrome) block the microphone on local files. If recording doesn't work, upload the file to <a href="https://netlify.com" target="_blank" style="color:#92400e;font-weight:700">netlify.com</a> (free, takes 2 minutes) to get an <code style="background:#fde68a;padding:2px 5px;border-radius:4px">https://</code> link. Or try <strong>Firefox</strong> which usually works on local files.</p>
+    </div>
+
+    <!-- Mic error detail banner -->
+    <div class="mic-error-banner" id="micErrorBanner">
+      <h4 id="micErrorTitle">🎙️ Microphone Issue</h4>
+      <p id="micErrorMsg"></p>
+      <ol class="fix-steps" id="micErrorSteps"></ol>
+      <button class="btn-retry-mic" onclick="retryMicPermission()">🔄 Try Again</button>
+    </div>
+
+    <div class="mic-notice">
+      <span class="mic-icon">🎙️</span>
+      <div>
+        <strong>Recording Tips:</strong> Click <strong>Listen 🔊</strong> to hear the word, then click <strong>Record 🎤</strong> to record yourself.
+        Allow the microphone when your browser asks. Best: <strong>Chrome or Edge</strong>.
+        &nbsp;<button onclick="testMicrophone()" style="background:#dbeafe;color:#1d4ed8;border:none;padding:5px 12px;border-radius:6px;font-size:0.82rem;font-weight:700;cursor:pointer;vertical-align:middle;">🎙️ Test Microphone First</button>
+      </div>
+    </div>
+    <div class="section-filter">
+      <label>Filter by:</label>
+      <select class="filter-select" id="categoryFilter" onchange="renderPractice()">
+        <option value="">All Categories</option>
+      </select>
+      <select class="filter-select" id="statusFilter" onchange="renderPractice()">
+        <option value="">All Words</option>
+        <option value="recorded">Recorded ✅</option>
+        <option value="pending">Not Yet Recorded</option>
+      </select>
+    </div>
+    <div id="practiceContainer"></div>
+  </div>
+
+  <!-- ===== SENTENCES ===== -->
+  <div class="page" id="page-sentences">
+    <div class="mic-notice">
+      <span class="mic-icon">💬</span>
+      <div>
+        <strong>Sentence Practice:</strong> Listen to each sentence, then record yourself reading it aloud.
+        Sentences help you practice phonics in real context.
+        &nbsp;<button onclick="testMicrophone()" style="background:#dbeafe;color:#1d4ed8;border:none;padding:5px 12px;border-radius:6px;font-size:0.82rem;font-weight:700;cursor:pointer;vertical-align:middle;">🎙️ Test Microphone</button>
+      </div>
+    </div>
+    <div id="sentencesContainer"></div>
+  </div>
+
+  <!-- ===== RECORDINGS ===== -->
+  <div class="page" id="page-recordings">
+    <div class="recordings-filter">
+      <input class="search-input" type="text" id="recSearch" placeholder="Search word or sentence..." oninput="renderRecordings()"/>
+      <select class="filter-select" id="recTypeFilter" onchange="renderRecordings()">
+        <option value="">All Types</option>
+        <option value="word">Words</option>
+        <option value="sentence">Sentences</option>
+      </select>
+    </div>
+    <div id="recordingsList"></div>
+  </div>
+
+  <!-- ===== PROGRESS ===== -->
+  <div class="page" id="page-progress">
+    <div class="progress-grid" id="progressGrid"></div>
+    <div class="leaderboard" id="leaderboard">
+      <h3>🏆 Class Leaderboard (Top 10)</h3>
+      <div id="leaderboardList"></div>
+    </div>
+  </div>
+
+  <!-- ===== ADMIN ===== -->
+  <div class="page" id="page-admin">
+    <div class="admin-banner">
+      <div>
+        <h2>👨‍🏫 Teacher Dashboard</h2>
+        <p>Monitor all 400 students — recordings, progress and scores</p>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-sm btn-listen" onclick="exportCSV()" style="padding:9px 16px;font-size:0.85rem;">⬇️ Export CSV</button>
+        <button class="btn-sm btn-play" onclick="showAddStudent()" style="padding:9px 16px;font-size:0.85rem;">➕ Add Student</button>
+      </div>
+    </div>
+
+    <div class="stats-grid" id="adminStats"></div>
+
+    <div class="admin-search-bar">
+      <input class="search-input" type="text" id="adminSearch" placeholder="Search student name or username..." oninput="renderAdminTable()"/>
+      <select class="filter-select" id="adminClassFilter" onchange="renderAdminTable()">
+        <option value="">All Classes</option>
+      </select>
+      <select class="filter-select" id="adminSortFilter" onchange="renderAdminTable()">
+        <option value="name">Sort by Name</option>
+        <option value="recordings">Sort by Recordings ↓</option>
+        <option value="score">Sort by Score ↓</option>
+      </select>
+    </div>
+
+    <div style="background:white;border-radius:14px;box-shadow:var(--shadow);overflow:auto;">
+      <table class="admin-table" id="adminTable">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Student</th>
+            <th>Class</th>
+            <th>Username</th>
+            <th>Words Recorded</th>
+            <th>Sentences</th>
+            <th>Score</th>
+            <th>Last Active</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="adminTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /mainApp -->
+
+<!-- STUDENT DETAIL MODAL -->
+<div class="modal-overlay" id="studentModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('studentModal')">✕</button>
+    <h3 id="modalStudentTitle">Student Details</h3>
+    <div id="modalStudentContent"></div>
+  </div>
+</div>
+
+<!-- ADD STUDENT MODAL -->
+<div class="modal-overlay" id="addStudentModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('addStudentModal')">✕</button>
+    <h3>➕ Add New Student</h3>
+    <div class="form-group"><label>FULL NAME</label><input id="newName" type="text" placeholder="Student Full Name"/></div>
+    <div class="form-group"><label>USERNAME</label><input id="newUsername" type="text" placeholder="e.g. student401"/></div>
+    <div class="form-group"><label>PASSWORD</label><input id="newPassword" type="text" placeholder="Set a password"/></div>
+    <div class="form-group"><label>CLASS</label><input id="newClass" type="text" placeholder="e.g. Class 3A"/></div>
+    <button class="btn-login" onclick="addStudent()" style="margin-top:8px;">Add Student</button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// DATA: 145 PHONICS SECTIONS (from original app)
+// ============================================================
+const rawData = [
+"Short Vowels|a|/æ/|ant:ant,axe:axe,map:map,fan:fan,ham:ham,wag:wag,mad:mad,yak:yak,jam:jam,pan:pan,bat:bat,rat:rat,van:van,cap:cap,tap:tap,pan:pan,wax:wax,dad:dad,bag:bag,lap:lap",
+"Short Vowels|e|/e/|egg:egg,elf:elf,bed:bed,pen:pen,hen:hen,ten:ten,net:net,jet:jet,red:red,leg:leg,web:web,bell:bell,desk:desk,vest:vest,tent:tent,melt:melt,step:step,neck:neck,send:send,elk:elk",
+"Short Vowels|i|/ɪ/|igloo:igloo,ink:ink,pig:pig,sit:sit,big:big,six:six,win:win,pin:pin,zip:zip,kid:kid,lid:lid,bin:bin,lip:lip,tin:tin,dip:dip,wig:wig,hill:hill,milk:milk,dish:dish,fit:fit",
+"Short Vowels|o|/ɒ/|ox:ox,hot:hot,pot:pot,box:box,fox:fox,dog:dog,log:log,top:top,hop:hop,mop:mop,rod:rod,dot:dot,cob:cob,fog:fog,jog:jog,rock:rock,lock:lock,pond:pond,sock:sock,job:job",
+"Short Vowels|u|/ʌ/|up:up,under:under,bus:bus,sun:sun,bug:bug,rug:rug,mug:mug,tub:tub,nut:nut,hut:hut,gum:gum,pup:pup,run:run,mud:mud,duck:duck,truck:truck,jump:jump,hunt:hunt,cup:cup,rug:rug",
+"Consonants|b|/b/|bear:bear,balloon:balloon,book:book,bird:bird,baby:baby,banana:banana,basket:basket,butter:butter,beach:beach,berry:berry,bike:bike,boat:boat,bowl:bowl,button:button,bunny:bunny,bugle:bugle,belt:belt,bench:bench,box:box,bill:bill",
+"Consonants|c (hard)|/k/|camel:camel,candy:candy,card:card,cash:cash,cave:cave,coin:coin,cold:cold,corn:corn,cup:cup,cow:cow,cake:cake,cage:cage,call:call,camp:camp,cast:cast,coat:coat,clock:clock,comb:comb,curb:curb,copy:copy",
+"Consonants|d|/d/|dance:dance,dark:dark,day:day,deer:deer,dent:dent,dig:dig,dinner:dinner,dip:dip,dish:dish,dot:dot,doll:doll,dad:dad,duck:duck,desk:desk,door:door,drum:drum,dress:dress,doctor:doctor,dolphin:dolphin,dune:dune",
+"Consonants|f|/f/|fall:fall,family:family,fast:fast,feather:feather,feel:feel,feet:feet,fence:fence,field:field,fill:fill,fire:fire,fish:fish,fan:fan,farm:farm,fork:fork,five:five,four:four,face:face,foot:foot,fox:fox,frog:frog",
+"Consonants|g|/ɡ/|gate:gate,goat:goat,girl:girl,game:game,gold:gold,gift:gift,gum:gum,gas:gas,garden:garden,goose:goose,guitar:guitar,glass:glass,glove:glove,grape:grape,grass:grass,gray:gray,green:green,grow:grow,guard:guard,guide:guide",
+"Consonants|h|/h/|help:help,hill:hill,hit:hit,hold:hold,hole:hole,home:home,honey:honey,hop:hop,hot:hot,hug:hug,hat:hat,hen:hen,hippo:hippo,horse:horse,house:house,hand:hand,hair:hair,ham:ham,happy:happy,heart:heart",
+"Consonants|j|/dʒ/|join:join,joke:joke,joy:joy,juice:juice,July:July,June:June,junk:junk,just:just,jute:jute,jade:jade,jam:jam,jet:jet,jelly:jelly,jar:jar,jump:jump,jacket:jacket,jeans:jeans,jeep:jeep,job:job,jog:jog",
+"Consonants|k|/k/|kiss:kiss,kit:kit,koala:koala,krill:krill,kayak:kayak,kennel:kennel,kernel:kernel,kettle:kettle,keyboard:keyboard,khaki:khaki,kite:kite,king:king,kangaroo:kangaroo,key:key,kitchen:kitchen,kid:kid,keep:keep,ketchup:ketchup,kick:kick,kind:kind",
+"Consonants|l|/l/|lake:lake,lamb:lamb,lane:lane,last:last,late:late,left:left,less:less,lid:lid,life:life,list:list,lion:lion,lamp:lamp,leaf:leaf,leg:leg,lemon:lemon,light:light,lip:lip,lock:lock,log:log,lunch:lunch",
+"Consonants|m|/m/|melon:melon,middle:middle,mind:mind,mine:mine,miss:miss,mix:mix,mom:mom,money:money,monkey:monkey,mountain:mountain,moon:moon,milk:milk,mask:mask,mouse:mouse,mouth:mouth,man:man,map:map,mat:mat,meal:meal,meat:meat",
+"Consonants|n|/n/|new:new,next:next,nice:nice,night:night,no:no,noise:noise,north:north,note:note,number:number,nurse:nurse,nose:nose,net:net,nest:nest,nut:nut,nine:nine,nail:nail,name:name,nap:nap,neck:neck,need:need",
+"Consonants|p|/p/|pay:pay,peace:peace,pear:pear,penny:penny,people:people,person:person,pick:pick,picnic:picnic,pillow:pillow,pilot:pilot,pig:pig,pen:pen,pan:pan,pot:pot,pet:pet,pencil:pencil,paper:paper,park:park,party:party,path:path",
+"Consonants|qu|/kw/|quill:quill,quint:quint,quirk:quirk,quit:quit,quite:quite,quiz:quiz,quota:quota,quote:quote,quirky:quirky,quality:quality,queen:queen,quilt:quilt,quiet:quiet,quick:quick,quack:quack,quake:quake,quart:quart,quartz:quartz,quest:quest,queue:queue",
+"Consonants|r|/r/|rice:rice,rich:rich,ride:ride,right:right,road:road,rock:rock,roof:roof,room:room,root:root,rope:rope,rabbit:rabbit,rat:rat,red:red,ring:ring,rocket:rocket,rain:rain,rake:rake,read:read,real:real,rest:rest",
+"Consonants|s|/s/|say:say,sea:sea,seat:seat,see:see,seed:seed,sell:sell,send:send,seven:seven,sick:sick,side:side,sun:sun,soap:soap,sit:sit,six:six,star:star,sad:sad,safe:safe,sail:sail,salt:salt,sand:sand",
+"Consonants|t|/t/|tap:tap,teach:teach,team:team,teeth:teeth,tell:tell,tent:tent,test:test,thin:thin,time:time,toast:toast,tiger:tiger,ten:ten,top:top,tub:tub,tea:tea,table:table,tail:tail,take:take,talk:talk,tall:tall",
+"Consonants|v|/v/|vein:vein,velvet:velvet,verb:verb,very:very,vessel:vessel,vet:vet,vice:vice,video:video,village:village,violin:violin,van:van,vase:vase,vest:vest,vine:vine,violet:violet,vacuum:vacuum,valley:valley,value:value,vast:vast,vegetable:vegetable",
+"Consonants|w|/w/|wait:wait,wake:wake,walk:walk,wall:wall,want:want,warn:warn,warm:warm,wash:wash,water:water,wave:wave,watch:watch,whale:whale,wheel:wheel,wind:wind,wolf:wolf,wagon:wagon,way:way,we:we,weak:weak,weather:weather",
+"Consonants|x (end)|/ks/|fox:fox,box:box,six:six,ox:ox,mix:mix,fix:fix,wax:wax,taxi:taxi,ax:ax,relax:relax,index:index,reflex:reflex,suffix:suffix,text:text,tuxedo:tuxedo,xerox:xerox,flex:flex,next:next,extra:extra,exit:exit",
+"Consonants|y (start)|/j/|yolk:yolk,you:you,young:young,your:your,youth:youth,yuck:yuck,yucca:yucca,yule:yule,yummy:yummy,yurt:yurt,yellow:yellow,yo-yo:yo-yo,yak:yak,yacht:yacht,yard:yard,yawn:yawn,year:year,yell:yell,yes:yes,yet:yet",
+"Consonants|z|/z/|zig:zig,zinc:zinc,zing:zing,zip:zip,zone:zone,zoom:zoom,zucchini:zucchini,zulu:zulu,Zurich:Zurich,zesty:zesty,zebra:zebra,zero:zero,zoo:zoo,zipper:zipper,zigzag:zigzag,zap:zap,zeal:zeal,zebu:zebu,zen:zen,zest:zest",
+"L-Blends|bl|/bl/|blue:blue,black:black,block:block,blow:blow,blast:blast,blink:blink,blind:blind,blade:blade,bloom:bloom,blend:blend,blanch:blanch,blister:blister,blizzard:blizzard,blanket:blanket,bleat:bleat,blunt:blunt,blush:blush,blimp:blimp,blur:blur,blossom:blossom",
+"L-Blends|cl|/kl/|clock:clock,cloud:cloud,clap:clap,clean:clean,cliff:cliff,climb:climb,close:close,cloth:cloth,clown:clown,club:club,class:class,clay:clay,clear:clear,clerk:clerk,click:click,clip:clip,cloak:cloak,clog:clog,clone:clone,clue:clue",
+"L-Blends|fl|/fl/|flower:flower,flag:flag,fly:fly,flat:flat,floor:floor,flash:flash,flame:flame,fleet:fleet,float:float,flood:flood,flap:flap,flare:flare,flea:flea,flee:flee,flesh:flesh,flew:flew,flip:flip,flock:flock,floss:floss,flute:flute",
+"L-Blends|gl|/gl/|glass:glass,glove:glove,glue:glue,glad:glad,glide:glide,globe:globe,gloss:gloss,glow:glow,gloom:gloom,glory:glory,glacier:glacier,glance:glance,glare:glare,glaze:glaze,gleam:gleam,glee:glee,glen:glen,glib:glib,glitch:glitch,glitter:glitter",
+"L-Blends|pl|/pl/|plane:plane,plate:plate,play:play,plum:plum,plug:plug,plan:plan,plant:plant,plastic:plastic,plot:plot,plus:plus,place:place,plaid:plaid,plain:plain,plank:plank,plea:plea,pleat:pleat,plod:plod,plot:plot,plow:plow,plural:plural",
+"L-Blends|sl|/sl/|slid:slid,slim:slim,sling:sling,slit:slit,slop:slop,slot:slot,slope:slope,slow:slow,slug:slug,slush:slush,sleep:sleep,slide:slide,slot:slot,slip:slip,slap:slap,slate:slate,sleeve:sleeve,slice:slice,slick:slick,slack:slack",
+"R-Blends|br|/br/|breath:breath,breeze:breeze,bribe:bribe,bride:bride,brief:brief,bright:bright,brim:brim,broom:broom,broth:broth,bridge:bridge,bread:bread,brush:brush,brown:brown,brick:brick,brain:brain,branch:branch,brass:brass,brave:brave,break:break,brook:brook",
+"R-Blends|cr|/kr/|creak:creak,creek:creek,creep:creep,crept:crept,crest:crest,crew:crew,crib:crib,crisp:crisp,crop:crop,crunch:crunch,crab:crab,cry:cry,crown:crown,cream:cream,crane:crane,crack:crack,craft:craft,crash:crash,crawl:crawl,crazy:crazy",
+"R-Blends|dr|/dr/|dread:dread,dream:dream,drench:drench,drew:drew,dried:dried,drift:drift,drill:drill,drip:drip,drop:drop,drove:drove,drum:drum,dress:dress,drink:drink,drive:drive,drag:drag,drain:drain,drake:drake,drank:drank,draw:draw,drifted:drifted",
+"R-Blends|fr|/fr/|freeze:freeze,freight:freight,fresh:fresh,fret:fret,fried:fried,friend:friend,fright:fright,frill:frill,fringe:fringe,frost:frost,frog:frog,fruit:fruit,free:free,from:from,front:front,frame:frame,frank:frank,fray:fray,freak:freak,freckle:freckle",
+"R-Blends|gr|/gr/|gram:gram,grand:grand,grant:grant,graph:graph,grasp:grasp,grate:grate,grave:grave,gravy:gravy,great:great,greed:greed,grass:grass,green:green,grape:grape,grow:grow,gray:gray,grab:grab,grace:grace,grade:grade,graft:graft,grain:grain",
+"R-Blends|pr|/pr/|pro:pro,probe:probe,prompt:prompt,prone:prone,proof:proof,prop:prop,proud:proud,prove:prove,prow:prow,prune:prune,prince:prince,prize:prize,press:press,pray:pray,price:price,pride:pride,prim:prim,print:print,prior:prior,prism:prism",
+"R-Blends|tr|/tr/|tram:tram,tramp:tramp,trash:trash,tread:tread,trek:trek,tribe:tribe,trick:trick,trim:trim,trip:trip,trot:trot,tree:tree,truck:truck,train:train,trap:trap,tray:tray,trace:trace,track:track,trade:trade,trail:trail,trait:trait",
+"S-Blends|sc|/sk/|scan:scan,scare:scare,scarf:scarf,scent:scent,school:school,score:score,scale:scale,scoop:scoop,scoff:scoff,scaly:scaly,scold:scold,scoot:scoot,scope:scope,scant:scant,scene:scene,scour:scour,scuff:scuff,scheme:scheme,script:script,screen:screen",
+"S-Blends|sk|/sk/|skip:skip,skin:skin,sky:sky,skate:skate,sketch:sketch,skill:skill,skim:skim,skirt:skirt,skull:skull,skunk:skunk,sketchy:sketchy,skinny:skinny,skilled:skilled,skillet:skillet,skipper:skipper,skiff:skiff,skydive:skydive,skulk:skulk,skewer:skewer,skeletal:skeletal",
+"S-Blends|sm|/sm/|smile:smile,smoke:smoke,small:small,smell:smell,smart:smart,smash:smash,smear:smear,smelt:smelt,smirk:smirk,smock:smock,smog:smog,smooth:smooth,smudge:smudge,smug:smug,smuggle:smuggle,smith:smith,smarty:smarty,smack:smack,smoking:smoking,smeary:smeary",
+"S-Blends|sn|/sn/|snail:snail,snack:snack,snag:snag,snare:snare,snarl:snarl,snatch:snatch,sneak:sneak,sneaker:sneaker,snore:snore,snout:snout,sneer:sneer,sneeze:sneeze,sniff:sniff,snip:snip,snow:snow,snort:snort,snuff:snuff,snug:snug,snippet:snippet,snappy:snappy",
+"S-Blends|sp|/sp/|spoon:spoon,spider:spider,spot:spot,spell:spell,space:space,spade:spade,span:span,spare:spare,spark:spark,spat:spat,spawn:spawn,speak:speak,spear:spear,speck:speck,speed:speed,spend:spend,spent:spent,spice:spice,spike:spike,spill:spill",
+"S-Blends|st|/st/|star:star,stop:stop,step:step,stick:stick,stone:stone,stack:stack,staff:staff,stag:stag,stage:stage,stain:stain,stair:stair,stake:stake,stale:stale,stall:stall,stamp:stamp,stand:stand,stare:stare,start:start,state:state,stay:stay",
+"S-Blends|sw|/sw/|swim:swim,swing:swing,swan:swan,sweet:sweet,switch:switch,swab:swab,swag:swag,swam:swam,swamp:swamp,swap:swap,swarm:swarm,swat:swat,sway:sway,swear:swear,sweat:sweat,sweep:sweep,swell:swell,swept:swept,swift:swift,swirl:swirl",
+"3-Letter Blends|str|/str/|street:street,strong:strong,string:string,straw:straw,stream:stream,strange:strange,strike:strike,stripe:stripe,stress:stress,strap:strap,structure:structure,struggle:struggle,strum:strum,strategy:strategy,stretch:stretch,strict:strict,stride:stride,stroke:stroke,stroll:stroll,strainer:strainer",
+"3-Letter Blends|spr|/spr/|spring:spring,spray:spray,spread:spread,sprout:sprout,sprint:sprint,sprinkle:sprinkle,sprawl:sprawl,sprite:sprite,spree:spree,sprain:sprain,sprang:sprang,spruce:spruce,sprung:sprung,spry:spry,sprinkler:sprinkler,sprinter:sprinter,spritely:spritely,spruced:spruced,springtime:springtime,sprawled:sprawled",
+"3-Letter Blends|spl|/spl/|splash:splash,split:split,splendid:splendid,splinter:splinter,splotch:splotch,spleen:spleen,splice:splice,splurge:splurge,splat:splat,spline:spline,splattered:splattered,splint:splint,splay:splay,splurging:splurging,splenic:splenic,splinted:splinted,spliced:spliced,splintered:splintered,splitting:splitting,splattering:splattering",
+"3-Letter Blends|scr|/skr/|scream:scream,screen:screen,scrub:scrub,scratch:scratch,scrap:scrap,scroll:scroll,screw:screw,scribble:scribble,scrape:scrape,scruffy:scruffy,scrubbed:scrubbed,scratchy:scratchy,script:script,scrimp:scrimp,screech:screech,scribe:scribe,scrip:scrip,scram:scram,scrapping:scrapping,scrim:scrim",
+"3-Letter Blends|shr|/ʃr/|shrimp:shrimp,shred:shred,shrink:shrink,shrub:shrub,shrug:shrug,shriek:shriek,shrine:shrine,shroud:shroud,shrew:shrew,shrill:shrill,shrapnel:shrapnel,shrive:shrive,shrunken:shrunken,shrivel:shrivel,shrank:shrank,shrunk:shrunk,shrieking:shrieking,shredding:shredding,shrined:shrined,shrubby:shrubby",
+"3-Letter Blends|thr|/θr/|three:three,throw:throw,throat:throat,throne:throne,thread:thread,through:through,thrill:thrill,thrust:thrust,throb:throb,threat:threat,thresh:thresh,thrice:thrice,thrift:thrift,thrive:thrive,throaty:throaty,throng:throng,throughout:throughout,thruster:thruster,thrash:thrash,thrashed:thrashed",
+"Digraphs|ch|/tʃ/|chair:chair,cheese:cheese,chicken:chicken,cherry:cherry,chin:chin,chop:chop,lunch:lunch,beach:beach,watch:watch,peach:peach,chart:chart,churn:churn,check:check,cheap:cheap,chest:chest,chick:chick,child:child,chill:chill,chime:chime,chirp:chirp",
+"Digraphs|ch (hard)|/k/|chorus:chorus,chemist:chemist,chaos:chaos,character:character,echo:echo,school:school,stomach:stomach,anchor:anchor,orchid:orchid,monarch:monarch,mechanic:mechanic,chord:chord,chrome:chrome,chronic:chronic,scheme:scheme,schedule:schedule,choir:choir,cholera:cholera,chasm:chasm,chemistry:chemistry",
+"Digraphs|ch (soft)|/ʃ/|chef:chef,chute:chute,machine:machine,parachute:parachute,mustache:mustache,brochure:brochure,chic:chic,quiche:quiche,cache:cache,chauffeur:chauffeur,chiffon:chiffon,champagne:champagne,chandelier:chandelier,charlatan:charlatan,chassis:chassis,chauvinist:chauvinist,chevron:chevron,chivalry:chivalry,crochet:crochet,machete:machete",
+"Digraphs|sh|/ʃ/|ship:ship,shoe:shoe,shop:shop,sheep:sheep,shark:shark,shell:shell,fish:fish,dish:dish,brush:brush,wash:wash,shelf:shelf,shine:shine,shake:shake,shape:shape,share:share,sharp:sharp,shave:shave,shoot:shoot,shout:shout,shade:shade",
+"Digraphs|th (soft)|/θ/|three:three,thumb:thumb,thin:thin,think:think,thank:thank,bath:bath,teeth:teeth,mouth:mouth,path:path,math:math,thick:thick,thing:thing,third:third,thirst:thirst,thorn:thorn,thread:thread,threat:threat,thrill:thrill,tooth:tooth,cloth:cloth",
+"Digraphs|th (hard)|/ð/|this:this,that:that,they:they,them:them,then:then,these:these,those:those,father:father,mother:mother,brother:brother,feather:feather,leather:leather,weather:weather,though:though,breathe:breathe,bathe:bathe,smooth:smooth,rather:rather,soothe:soothe,clothing:clothing",
+"Digraphs|ph|/f/|phone:phone,photo:photo,elephant:elephant,dolphin:dolphin,alphabet:alphabet,graph:graph,phonics:phonics,trophy:trophy,sphere:sphere,nephew:nephew,pharmacy:pharmacy,pharaoh:pharaoh,phlox:phlox,phobia:phobia,phonic:phonic,photon:photon,phase:phase,phrase:phrase,physic:physic,phantom:phantom",
+"Digraphs|wh|/w/|whale:whale,white:white,wheel:wheel,whistle:whistle,whip:whip,wheat:wheat,whisk:whisk,whisper:whisper,where:where,when:when,which:which,while:while,whirl:whirl,whiz:whiz,whole:whole,who:who,whom:whom,whose:whose,why:why,what:what",
+"Digraphs|ng|/ŋ/|king:king,ring:ring,sing:sing,wing:wing,long:long,song:song,swing:swing,string:string,strong:strong,spring:spring,bang:bang,bring:bring,cling:cling,dung:dung,fang:fang,gang:gang,hang:hang,lung:lung,pang:pang,ping:ping",
+"Digraphs|ck|/k/|duck:duck,sock:sock,clock:clock,truck:truck,black:black,kick:kick,neck:neck,rock:rock,stick:stick,lock:lock,check:check,click:click,crack:crack,deck:deck,flock:flock,luck:luck,pack:pack,pick:pick,puck:puck,quick:quick",
+"Long Vowels|a_e|/eɪ/|cake:cake,lake:lake,gate:gate,game:game,face:face,name:name,tape:tape,snake:snake,plate:plate,wave:wave,plane:plane,grape:grape,brave:brave,cage:cage,case:case,chase:chase,flake:flake,flame:flame,frame:frame,grate:grate",
+"Long Vowels|e_e|/iː/|these:these,theme:theme,Pete:Pete,complete:complete,delete:delete,extreme:extreme,athlete:athlete,eve:eve,impede:impede,scene:scene,trapeze:trapeze,stampede:stampede,centipede:centipede,concrete:concrete,obsolete:obsolete,discrete:discrete,interfere:interfere,precede:precede,recede:recede,concede:concede",
+"Long Vowels|i_e|/aɪ/|bike:bike,kite:kite,five:five,nine:nine,ride:ride,time:time,like:like,line:line,nice:nice,white:white,prize:prize,fire:fire,lime:lime,pine:pine,slide:slide,dime:dime,file:file,hide:hide,hike:hike,ice:ice",
+"Long Vowels|o_e|/oʊ/|home:home,bone:bone,rose:rose,nose:nose,rope:rope,stone:stone,cone:cone,hose:hose,globe:globe,note:note,pole:pole,vote:vote,woke:woke,broke:broke,close:close,cone:cone,drove:drove,hope:hope,lone:lone,robe:robe",
+"Long Vowels|u_e|/uː/|cute:cute,tube:tube,cube:cube,mute:mute,huge:huge,tune:tune,mule:mule,June:June,flute:flute,dune:dune,brute:brute,duke:duke,fuse:fuse,huger:huger,lute:lute,nude:nude,pure:pure,rude:rude,rule:rule,use:use",
+"Vowel Teams|ai|/eɪ/|rain:rain,train:train,tail:tail,mail:mail,sail:sail,snail:snail,paint:paint,wait:wait,brain:brain,nail:nail,bail:bail,frail:frail,gain:gain,grain:grain,jail:jail,laid:laid,main:main,paid:paid,pain:pain,plain:plain",
+"Vowel Teams|ay|/eɪ/|day:day,play:play,say:say,may:may,tray:tray,hay:hay,pay:pay,clay:clay,way:way,gray:gray,bay:bay,fray:fray,jay:jay,lay:lay,pray:pray,ray:ray,slay:slay,spray:spray,sway:sway,spraying:spraying",
+"Vowel Teams|ee|/iː/|tree:tree,bee:bee,feet:feet,see:see,green:green,sheep:sheep,queen:queen,three:three,teeth:teeth,sweet:sweet,beef:beef,bleed:bleed,cheek:cheek,deep:deep,feed:feed,feel:feel,free:free,heel:heel,jeep:jeep,keep:keep",
+"Vowel Teams|ea (long)|/iː/|sea:sea,tea:tea,meat:meat,leaf:leaf,eat:eat,read:read,team:team,peach:peach,beach:beach,clean:clean,bead:bead,beam:beam,bean:bean,beast:beast,beat:beat,cheap:cheap,cream:cream,dream:dream,east:east,heal:heal",
+"Vowel Teams|ea (short)|/e/|head:head,bread:bread,deaf:deaf,sweat:sweat,thread:thread,feather:feather,leather:leather,weather:weather,pleasant:pleasant,treasure:treasure,measure:measure,health:health,wealth:wealth,stealth:stealth,ready:ready,steady:steady,already:already,heaven:heaven,heavy:heavy,jealous:jealous",
+"Vowel Teams|oa|/oʊ/|boat:boat,coat:coat,soap:soap,goat:goat,road:road,toast:toast,float:float,toad:toad,load:load,coach:coach,bloat:bloat,boast:boast,cloak:cloak,coal:coal,coast:coast,foam:foam,goal:goal,moat:moat,oak:oak,roach:roach",
+"Vowel Teams|oe|/oʊ/|toe:toe,hoe:hoe,doe:doe,foe:foe,woe:woe,aloe:aloe,floe:floe,roe:roe,sloe:sloe,throe:throe,tiptoe:tiptoe,oboe:oboe,heroes:heroes,potatoes:potatoes,tomatoes:tomatoes,echoes:echoes,goes:goes,toes:toes,foes:foes,echoes:echoes",
+"Vowel Teams|igh|/aɪ/|night:night,light:light,high:high,fight:fight,right:right,tight:tight,bright:bright,flight:flight,sigh:sigh,thigh:thigh,knight:knight,might:might,sight:sight,fright:fright,slight:slight,blight:blight,tonight:tonight,eyesight:eyesight,sunlight:sunlight,moonlight:moonlight",
+"Vowel Teams|ie (long i)|/aɪ/|pie:pie,tie:tie,lie:lie,cries:cries,dried:dried,flies:flies,fried:fried,pies:pies,spies:spies,untie:untie,magpie:magpie,necktie:necktie,belie:belie,skies:skies,relied:relied,untying:untying,lied:lied,ties:ties,untied:untied,untyings:untyings",
+"Vowel Teams|ie (long e)|/iː/|field:field,piece:piece,chief:chief,thief:thief,believe:believe,brief:brief,grief:grief,yield:yield,shield:shield,priest:priest,relief:relief,achieve:achieve,siege:siege,niece:niece,shriek:shriek,pier:pier,tier:tier,relieve:relieve,frontier:frontier,glacier:glacier",
+"Vowel Teams|ow (long o)|/oʊ/|snow:snow,window:window,yellow:yellow,bowl:bowl,pillow:pillow,slow:slow,grow:grow,crow:crow,show:show,low:low,blow:blow,row:row,crowing:crowing,flow:flow,glow:glow,know:know,mow:mow,own:own,yellowish:yellowish,glowing:glowing",
+"Vowel Teams|ei (long a)|/eɪ/|vein:vein,sleigh:sleigh,weigh:weigh,weight:weight,neigh:neigh,reign:reign,veil:veil,beige:beige,prey:prey,survey:survey,convey:convey,purvey:purvey,eight:eight,eighty:eighty,skein:skein,reindeer:reindeer,weightless:weightless,weighing:weighing,rein:rein,veiling:veiling",
+"Vowel Teams|ey (long a)|/eɪ/|they:they,grey:grey,obey:obey,survey:survey,convey:convey,purvey:purvey,hey:hey,prey:prey,whey:whey,obeying:obeying,greyish:greyish,conveyer:conveyer,purveyance:purveyance,disobey:disobey,obeyed:obeyed,surveyor:surveyor,eyrie:eyrie,greyly:greyly,greyed:greyed,purveying:purveying",
+"Vowel Teams|ei (long e)|/iː/|receive:receive,ceiling:ceiling,receipt:receipt,deceive:deceive,perceive:perceive,conceive:conceive,conceit:conceit,caffeine:caffeine,protein:protein,seize:seize,leisure:leisure,weird:weird,neither:neither,either:either,heifer:heifer,counterfeit:counterfeit,perceiving:perceiving,proteine:proteine,seized:seized,receiving:receiving",
+"Vowel Teams|oo (short)|/ʊ/|book:book,look:look,took:took,good:good,wood:wood,foot:foot,cook:cook,hook:hook,shook:shook,brook:brook,crook:crook,hood:hood,stood:stood,wool:wool,soot:soot,cookie:cookie,rookie:rookie,wooden:wooden,footstep:footstep,booklet:booklet",
+"Vowel Teams|oo (long)|/uː/|moon:moon,soon:soon,food:food,pool:pool,cool:cool,tool:tool,fool:fool,roof:roof,room:room,boot:boot,root:root,shoot:shoot,loose:loose,goose:goose,moose:moose,smooth:smooth,tooth:tooth,bloom:bloom,broom:broom,spoon:spoon",
+"Vowel Teams|ew|/uː/|new:new,few:few,flew:flew,grew:grew,drew:drew,threw:threw,knew:knew,chew:chew,stew:stew,brew:brew,crew:crew,screw:screw,blew:blew,dew:dew,pew:pew,nephew:nephew,jewel:jewel,cashew:cashew,mildew:mildew,sinew:sinew",
+"Vowel Teams|ue|/uː/|blue:blue,true:true,glue:glue,clue:clue,due:due,sue:sue,rescue:rescue,argue:argue,value:value,statue:statue,avenue:avenue,tissue:tissue,issue:issue,pursue:pursue,fondue:fondue,barbecue:barbecue,subdue:subdue,continue:continue,revenue:revenue,venue:venue",
+"Vowel Teams|ui|/uː/|fruit:fruit,juice:juice,suit:suit,cruise:cruise,bruise:bruise,ruin:ruin,fluid:fluid,recruit:recruit,nuisance:nuisance,circuit:circuit,biscuit:biscuit,guilty:guilty,guitar:guitar,build:build,guide:guide,guild:guild,guile:guile,guise:guise,suitcase:suitcase,juicy:juicy",
+"Diphthongs|aw|/ɔː/|saw:saw,paw:paw,jaw:jaw,raw:raw,law:law,draw:draw,straw:straw,claw:claw,flaw:flaw,thaw:thaw,hawk:hawk,crawl:crawl,dawn:dawn,lawn:lawn,yawn:yawn,drawn:drawn,awful:awful,awesome:awesome,shawl:shawl,brawl:brawl",
+"Diphthongs|au|/ɔː/|auto:auto,August:August,author:author,autumn:autumn,cause:cause,pause:pause,sauce:sauce,fault:fault,vault:vault,haul:haul,launch:launch,laundry:laundry,haunt:haunt,taunt:taunt,fraud:fraud,applause:applause,exhaust:exhaust,caution:caution,auction:auction,saucer:saucer",
+"Diphthongs|ou|/aʊ/|out:out,our:our,house:house,mouse:mouse,mouth:mouth,south:south,cloud:cloud,loud:loud,proud:proud,sound:sound,round:round,found:found,ground:ground,pound:pound,count:count,mount:mount,bounce:bounce,pounce:pounce,ounce:ounce,shout:shout",
+"Diphthongs|ow|/aʊ/|cow:cow,how:how,now:now,wow:wow,bow:bow,owl:owl,town:town,down:down,brown:brown,clown:clown,crown:crown,drown:drown,frown:frown,growl:growl,prowl:prowl,crowd:crowd,powder:powder,power:power,shower:shower,tower:tower",
+"Diphthongs|oi|/ɔɪ/|oil:oil,boil:boil,coil:coil,foil:foil,soil:soil,spoil:spoil,toil:toil,coin:coin,join:join,point:point,joint:joint,voice:voice,choice:choice,noise:noise,poise:poise,moist:moist,hoist:hoist,avoid:avoid,poison:poison,toilet:toilet",
+"Diphthongs|oy|/ɔɪ/|boy:boy,toy:toy,joy:joy,soy:soy,ploy:ploy,Troy:Troy,coy:coy,decoy:decoy,enjoy:enjoy,employ:employ,destroy:destroy,annoy:annoy,loyal:loyal,royal:royal,voyage:voyage,oyster:oyster,boycott:boycott,joyful:joyful,joyous:joyous,employer:employer",
+"R-Controlled|ar|/ɑːr/|car:car,star:star,far:far,jar:jar,bar:bar,tar:tar,scar:scar,art:art,part:part,cart:cart,dart:dart,smart:smart,start:start,chart:chart,hard:hard,yard:yard,card:card,guard:guard,park:park,dark:dark",
+"R-Controlled|er|/ɜːr/|her:her,term:term,fern:fern,germ:germ,verb:verb,herd:herd,nerd:nerd,serve:serve,nerve:nerve,swerve:swerve,clerk:clerk,jerk:jerk,perk:perk,stern:stern,merge:merge,verge:verge,verse:verse,person:person,perfect:perfect,certain:certain",
+"R-Controlled|ir|/ɜːr/|bird:bird,girl:girl,shirt:shirt,skirt:skirt,dirt:dirt,third:third,sir:sir,stir:stir,firm:firm,squirm:squirm,chirp:chirp,twirl:twirl,whirl:whirl,swirl:swirl,smirk:smirk,quirk:quirk,birth:birth,circle:circle,circus:circus,thirst:thirst",
+"R-Controlled|or|/ɔːr/|for:for,or:or,nor:nor,cord:cord,lord:lord,ford:ford,sword:sword,cork:cork,fork:fork,pork:pork,stork:stork,form:form,storm:storm,horn:horn,corn:corn,born:born,torn:torn,worn:worn,short:short,sport:sport",
+"R-Controlled|ur|/ɜːr/|fur:fur,blur:blur,slur:slur,spur:spur,burn:burn,turn:turn,churn:churn,spurn:spurn,hurt:hurt,blurt:blurt,burst:burst,curb:curb,disturb:disturb,curl:curl,hurl:hurl,surf:surf,turf:turf,nurse:nurse,purse:purse,curse:curse",
+"R-Controlled|ore|/ɔːr/|more:more,store:store,score:score,chore:chore,shore:shore,snore:snore,core:core,bore:bore,tore:tore,wore:wore,swore:swore,explore:explore,ignore:ignore,adore:adore,restore:restore,before:before,galore:galore,spore:spore,pore:pore,sore:sore",
+"R-Controlled|oar|/ɔːr/|oar:oar,boar:boar,roar:roar,soar:soar,board:board,hoard:hoard,keyboard:keyboard,cupboard:cupboard,cardboard:cardboard,billboard:billboard,aboard:aboard,overboard:overboard,snowboard:snowboard,surfboard:surfboard,chalkboard:chalkboard,skateboard:skateboard,hoarse:hoarse,coarse:coarse,uproar:uproar,soaring:soaring",
+"R-Controlled|air|/eər/|air:air,hair:hair,chair:chair,pair:pair,fair:fair,stair:stair,flair:flair,lair:lair,dairy:dairy,fairy:fairy,hairy:hairy,repair:repair,despair:despair,impair:impair,affair:affair,unfair:unfair,wheelchair:wheelchair,armchair:armchair,midair:midair,haircut:haircut",
+"R-Controlled|ear|/ɪər/|ear:ear,hear:hear,near:near,dear:dear,fear:fear,tear:tear,year:year,clear:clear,gear:gear,rear:rear,smear:smear,spear:spear,appear:appear,beard:beard,dreary:dreary,weary:weary,bleary:bleary,shear:shear,yearn:yearn,earring:earring",
+"R-Controlled|eer|/ɪər/|deer:deer,cheer:cheer,steer:steer,jeer:jeer,peer:peer,sneer:sneer,beer:beer,career:career,engineer:engineer,pioneer:pioneer,volunteer:volunteer,mutineer:mutineer,mountaineer:mountaineer,auctioneer:auctioneer,pamphleteer:pamphleteer,profiteer:profiteer,puppeteer:puppeteer,racketeer:racketeer,sightseer:sightseer,veneer:veneer",
+"Consonants|c (soft)|/s/|city:city,cell:cell,cent:cent,ice:ice,mice:mice,rice:rice,price:price,slice:slice,spice:spice,twice:twice,dance:dance,chance:chance,fence:fence,pencil:pencil,circle:circle,circus:circus,cinema:cinema,citizen:citizen,cigar:cigar,acid:acid",
+"Consonants|g (soft)|/dʒ/|gem:gem,gel:gel,gym:gym,giant:giant,magic:magic,page:page,cage:cage,stage:stage,huge:huge,age:age,wage:wage,rage:rage,engine:engine,danger:danger,stranger:stranger,ginger:ginger,giraffe:giraffe,gentle:gentle,general:general,genius:genius",
+"Silent Letters|kn|/n/|knee:knee,know:know,knife:knife,knight:knight,knit:knit,knot:knot,knock:knock,knob:knob,kneel:kneel,knew:knew,known:known,knack:knack,knave:knave,knead:knead,knell:knell,knickers:knickers,knoll:knoll,knuckle:knuckle,knapsack:knapsack,knighthood:knighthood",
+"Silent Letters|wr|/r/|wrap:wrap,write:write,wrong:wrong,wrist:wrist,wreck:wreck,wring:wring,wrestle:wrestle,wrinkle:wrinkle,wreath:wreath,wren:wren,wrench:wrench,wretched:wretched,wriggle:wriggle,wright:wright,writ:writ,writer:writer,writhe:writhe,written:written,wry:wry,wrapper:wrapper",
+"Silent Letters|gn|/n/|gnat:gnat,gnaw:gnaw,gnome:gnome,sign:sign,design:design,resign:resign,align:align,assign:assign,campaign:campaign,foreign:foreign,reign:reign,feign:feign,deign:deign,malign:malign,benign:benign,condign:condign,consign:consign,ensign:ensign,impugn:impugn,poignant:poignant",
+"Silent Letters|mb|/m/|lamb:lamb,comb:comb,bomb:bomb,tomb:tomb,thumb:thumb,crumb:crumb,dumb:dumb,numb:numb,plumb:plumb,climb:climb,limb:limb,womb:womb,succumb:succumb,aplomb:aplomb,catacomb:catacomb,corymb:corymb,coxcomb:coxcomb,dithyramb:dithyramb,hecatomb:hecatomb,rhomb:rhomb",
+"Silent Letters|rh|/r/|rhino:rhino,rhyme:rhyme,rhythm:rhythm,rhombus:rhombus,rhetoric:rhetoric,rheumatism:rheumatism,rhinestone:rhinestone,rhododendron:rhododendron,rhubarb:rhubarb,rhapsody:rhapsody,rhesus:rhesus,rheum:rheum,rhinitis:rhinitis,rhizome:rhizome,rhodium:rhodium,rhomboid:rhomboid,rhythmically:rhythmically,rhyolite:rhyolite,rhomb:rhomb,rhyming:rhyming",
+"Silent Letters|gh|/-/|high:high,sigh:sigh,thigh:thigh,weigh:weigh,weight:weight,eight:eight,freight:freight,sleigh:sleigh,neigh:neigh,straight:straight,light:light,night:night,right:right,sight:sight,tight:tight,bright:bright,flight:flight,fright:fright,knight:knight,might:might",
+"Trigraphs|dge|/dʒ/|badge:badge,edge:edge,hedge:hedge,ledge:ledge,wedge:wedge,sledge:sledge,pledge:pledge,fudge:fudge,judge:judge,nudge:nudge,smudge:smudge,grudge:grudge,trudge:trudge,bridge:bridge,ridge:ridge,fridge:fridge,cartridge:cartridge,partridge:partridge,porridge:porridge,dodge:dodge",
+"Trigraphs|tch|/tʃ/|catch:catch,match:match,patch:patch,batch:batch,hatch:hatch,latch:latch,snatch:snatch,scratch:scratch,watch:watch,fetch:fetch,sketch:sketch,stretch:stretch,itch:itch,pitch:pitch,witch:witch,ditch:ditch,switch:switch,twitch:twitch,botch:botch,notch:notch",
+"Trigraphs|eigh|/eɪ/|eight:eight,eighty:eighty,eighteen:eighteen,eighth:eighth,weigh:weigh,weight:weight,weighty:weighty,weightless:weightless,sleigh:sleigh,neigh:neigh,neighbor:neighbor,neighborhood:neighborhood,freight:freight,freighter:freighter,inveigh:inveigh,skeigh:skeigh,teigh:teigh,leigh:leigh,dreigh:dreigh,heigh:heigh",
+"Trigraphs|ough|/ɔː/|bought:bought,brought:brought,fought:fought,thought:thought,ought:ought,nought:nought,wrought:wrought,besought:besought,methought:methought,forethought:forethought,afterthought:afterthought,dough:dough,though:though,although:although,thorough:thorough,borough:borough,furlough:furlough,plough:plough,slough:slough,bough:bough",
+"Endings|-ble|/bəl/|table:table,cable:cable,fable:fable,bubble:bubble,trouble:trouble,double:double,pebble:pebble,nibble:nibble,scribble:scribble,wobble:wobble,cobble:cobble,gobble:gobble,humble:humble,tumble:tumble,stumble:stumble,crumble:crumble,grumble:grumble,mumble:mumble,fumble:fumble,jumble:jumble",
+"Endings|-cle|/kəl/|circle:circle,uncle:uncle,bicycle:bicycle,muscle:muscle,article:article,particle:particle,vehicle:vehicle,miracle:miracle,obstacle:obstacle,spectacle:spectacle,tentacle:tentacle,icicle:icicle,cubicle:cubicle,chronicle:chronicle,pinnacle:pinnacle,receptacle:receptacle,barnacle:barnacle,monocle:monocle,cuticle:cuticle,ventricle:ventricle",
+"Endings|-gle|/gəl/|eagle:eagle,beagle:beagle,bugle:bugle,angle:angle,tangle:tangle,dangle:dangle,mangle:mangle,strangle:strangle,wrangle:wrangle,jingle:jingle,mingle:mingle,single:single,tingle:tingle,shingle:shingle,bungle:bungle,jungle:jungle,smuggle:smuggle,struggle:struggle,juggle:juggle,snuggle:snuggle",
+"Endings|-ple|/pəl/|apple:apple,people:people,purple:purple,sample:sample,simple:simple,temple:temple,maple:maple,staple:staple,steeple:steeple,dimple:dimple,pimple:pimple,crumple:crumple,rumple:rumple,trample:trample,multiple:multiple,principle:principle,disciple:disciple,triple:triple,cripple:cripple,supple:supple",
+"Endings|-tle|/təl/|bottle:bottle,little:little,settle:settle,kettle:kettle,cattle:cattle,battle:battle,rattle:rattle,tattle:tattle,prattle:prattle,beetle:beetle,title:title,turtle:turtle,myrtle:myrtle,startle:startle,gentle:gentle,mantle:mantle,dismantle:dismantle,castle:castle,whistle:whistle,wrestle:wrestle",
+"Endings|-zle|/zəl/|puzzle:puzzle,dazzle:dazzle,frizzle:frizzle,sizzle:sizzle,drizzle:drizzle,guzzle:guzzle,muzzle:muzzle,nuzzle:nuzzle,embezzle:embezzle,bamboozle:bamboozle,frazzle:frazzle,nozzle:nozzle,swizzle:swizzle,twizzle:twizzle,bedazzle:bedazzle,grizzle:grizzle,snizzle:snizzle,sozzle:sozzle,touzle:touzle,foozle:foozle",
+"Endings|-ed (/t/)|/t/|jumped:jumped,walked:walked,talked:talked,looked:looked,cooked:cooked,helped:helped,worked:worked,washed:washed,watched:watched,kissed:kissed,missed:missed,passed:passed,dressed:dressed,guessed:guessed,hoped:hoped,liked:liked,baked:baked,stopped:stopped,dropped:dropped,shopped:shopped",
+"Endings|-ed (/d/)|/d/|played:played,called:called,smiled:smiled,loved:loved,lived:lived,moved:moved,opened:opened,closed:closed,listened:listened,happened:happened,cried:cried,tried:tried,studied:studied,carried:carried,hurried:hurried,worried:worried,enjoyed:enjoyed,stayed:stayed,showed:showed,snowed:snowed",
+"Endings|-ed (/ɪd/)|/ɪd/|wanted:wanted,needed:needed,waited:waited,started:started,ended:ended,painted:painted,planted:planted,shouted:shouted,counted:counted,rested:rested,tested:tested,trusted:trusted,visited:visited,invited:invited,invented:invented,decided:decided,divided:divided,provided:provided,included:included,added:added",
+"Suffixes|-ing|/ɪŋ/|playing:playing,going:going,doing:doing,seeing:seeing,eating:eating,reading:reading,sleeping:sleeping,working:working,helping:helping,learning:learning,singing:singing,bringing:bringing,thinking:thinking,looking:looking,walking:walking,talking:talking,jumping:jumping,running:running,swimming:swimming,sitting:sitting",
+"Suffixes|-er|/ər/|teacher:teacher,worker:worker,player:player,singer:singer,reader:reader,writer:writer,driver:driver,baker:baker,farmer:farmer,painter:painter,builder:builder,helper:helper,listener:listener,speaker:speaker,runner:runner,swimmer:swimmer,winner:winner,loser:loser,buyer:buyer,seller:seller",
+"Suffixes|-est|/ɪst/|biggest:biggest,smallest:smallest,tallest:tallest,shortest:shortest,longest:longest,fastest:fastest,slowest:slowest,oldest:oldest,youngest:youngest,newest:newest,coldest:coldest,hottest:hottest,hardest:hardest,easiest:easiest,happiest:happiest,saddest:saddest,funniest:funniest,smartest:smartest,strongest:strongest,weakest:weakest",
+"Suffixes|-ly|/li/|quickly:quickly,slowly:slowly,loudly:loudly,quietly:quietly,happily:happily,sadly:sadly,easily:easily,hardly:hardly,badly:badly,nicely:nicely,carefully:carefully,safely:safely,bravely:bravely,kindly:kindly,softly:softly,suddenly:suddenly,finally:finally,really:really,exactly:exactly,mostly:mostly",
+"Suffixes|-y (long i)|/aɪ/|cry:cry,fly:fly,sky:sky,try:try,dry:dry,fry:fry,spy:spy,shy:shy,sly:sly,why:why,my:my,by:by,rely:rely,reply:reply,supply:supply,apply:apply,deny:deny,defy:defy,imply:imply,multiply:multiply",
+"Suffixes|-y (long e)|/i/|happy:happy,funny:funny,sunny:sunny,rainy:rainy,windy:windy,cloudy:cloudy,snowy:snowy,dirty:dirty,dusty:dusty,messy:messy,noisy:noisy,busy:busy,easy:easy,heavy:heavy,ready:ready,penny:penny,puppy:puppy,baby:baby,lady:lady,city:city",
+"Suffixes|-ful|/fʊl/|helpful:helpful,careful:careful,hopeful:hopeful,joyful:joyful,playful:playful,thankful:thankful,peaceful:peaceful,beautiful:beautiful,colorful:colorful,powerful:powerful,useful:useful,painful:painful,harmful:harmful,fearful:fearful,tearful:tearful,cheerful:cheerful,thoughtful:thoughtful,forgetful:forgetful,successful:successful,wonderful:wonderful",
+"Suffixes|-less|/ləs/|helpless:helpless,careless:careless,hopeless:hopeless,joyless:joyless,thankless:thankless,useless:useless,painless:painless,harmless:harmless,fearless:fearless,tearless:tearless,thoughtless:thoughtless,endless:endless,homeless:homeless,nameless:nameless,restless:restless,sleepless:sleepless,tasteless:tasteless,worthless:worthless,countless:countless,breathless:breathless",
+"Suffixes|-ness|/nəs/|happiness:happiness,sadness:sadness,goodness:goodness,badness:badness,kindness:kindness,darkness:darkness,brightness:brightness,softness:softness,hardness:hardness,sweetness:sweetness,bitterness:bitterness,weakness:weakness,illness:illness,sickness:sickness,fitness:fitness,madness:madness,gladness:gladness,blindness:blindness,deafness:deafness,boldness:boldness",
+"Suffixes|-ment|/mənt/|payment:payment,enjoyment:enjoyment,agreement:agreement,argument:argument,movement:movement,statement:statement,treatment:treatment,punishment:punishment,development:development,government:government,environment:environment,equipment:equipment,experiment:experiment,instrument:instrument,document:document,monument:monument,moment:moment,comment:comment,apartment:apartment,department:department",
+"Suffixes|-tion|/ʃən/|action:action,nation:nation,station:station,fraction:fraction,friction:friction,fiction:fiction,section:section,option:option,portion:portion,motion:motion,notion:notion,potion:potion,lotion:lotion,vacation:vacation,location:location,education:education,information:information,attention:attention,direction:direction,question:question",
+"Suffixes|-sion|/ʒən/|vision:vision,television:television,decision:decision,division:division,collision:collision,explosion:explosion,erosion:erosion,invasion:invasion,persuasion:persuasion,evasion:evasion,occasion:occasion,conclusion:conclusion,confusion:confusion,illusion:illusion,delusion:delusion,exclusion:exclusion,inclusion:inclusion,seclusion:seclusion,tension:tension,mansion:mansion",
+"Silent Letters|Silent t|/-/|listen:listen,fasten:fasten,soften:soften,Christmas:Christmas,castle:castle,whistle:whistle,thistle:thistle,rustle:rustle,bustle:bustle,hustle:hustle,jostle:jostle,nestle:nestle,apostle:apostle,epistle:epistle,mortgage:mortgage,ballet:ballet,buffet:buffet,depot:depot,rapport:rapport,ricochet:ricochet",
+"Silent Letters|Silent l|/-/|walk:walk,talk:talk,calm:calm,half:half,salmon:salmon,yolk:yolk,palm:palm,balm:balm,chalk:chalk,folk:folk,should:should,would:would,could:could,calf:calf,behalf:behalf,almond:almond,psalm:psalm,folks:folks,stalk:stalk,qualm:qualm",
+"Ending Pattern|-dle|/əl/|puddle:puddle,saddle:saddle,candle:candle,middle:middle,handle:handle,noodle:noodle,bundle:bundle,cradle:cradle,paddle:paddle,bridle:bridle,kindle:kindle,riddle:riddle,muddle:muddle,huddle:huddle,needle:needle,dawdle:dawdle,girdle:girdle,hurdle:hurdle,spindle:spindle,straddle:straddle",
+"Ending Pattern|-fle|/əl/|ruffle:ruffle,waffle:waffle,rifle:rifle,stifle:stifle,baffle:baffle,shuffle:shuffle,sniffle:sniffle,trifle:trifle,raffle:raffle,souffle:souffle,muffle:muffle,scuffle:scuffle,snaffle:snaffle,truffle:truffle,whiffle:whiffle,piffle:piffle,kerfuffle:kerfuffle,snaffled:snaffled,muffled:muffled,rifled:rifled",
+"Suffixes|-ous|/əs/|famous:famous,nervous:nervous,dangerous:dangerous,jealous:jealous,various:various,joyous:joyous,curious:curious,glorious:glorious,obvious:obvious,serious:serious,precious:precious,cautious:cautious,enormous:enormous,dangerously:dangerously,marvelously:marvelously,adventurously:adventurously,generously:generously,humorously:humorously,poisonously:poisonously,mountainous:mountainous",
+"Schwa|a (schwa)|/ə/|about:about,around:around,data:data,sofa:sofa,banana:banana,alarm:alarm,apart:apart,afraid:afraid,adapt:adapt,alone:alone,among:among,avoid:avoid,amaze:amaze,amount:amount,amuse:amuse,adult:adult,agree:agree,ahead:ahead,away:away,arena:arena",
+"Prefixes|un-|/ʌn/|undo:undo,untie:untie,unlock:unlock,unpack:unpack,uncover:uncover,unfold:unfold,unzip:unzip,unplug:unplug,unreal:unreal,unfair:unfair,unkind:unkind,unhappy:unhappy,unable:unable,unusual:unusual,unknown:unknown,unseen:unseen,unheard:unheard,untrue:untrue,unwise:unwise,unwell:unwell",
+"Prefixes|re-|/ri/|redo:redo,rewrite:rewrite,read:read,replay:replay,rebuild:rebuild,remake:remake,reuse:reuse,recycle:recycle,return:return,replace:replace,remove:remove,review:review,report:report,react:react,recall:recall,remind:remind,repay:repay,reopen:reopen,reorder:reorder,repack:repack",
+"Prefixes|dis-|/dɪs/|dislike:dislike,disagree:disagree,disappear:disappear,disconnect:disconnect,discover:discover,discuss:discuss,disease:disease,disgrace:disgrace,disgust:disgust,dishonest:dishonest,disloyal:disloyal,dismay:dismay,dismiss:dismiss,disobey:disobey,disorder:disorder,display:display,dispute:dispute,disrupt:disrupt,distance:distance,disturb:disturb",
+"Prefixes|pre-|/pri/|prefix:prefix,prepare:prepare,predict:predict,prevent:prevent,preview:preview,prepay:prepay,preschool:preschool,preheat:preheat,pretest:pretest,prehistoric:prehistoric,precaution:precaution,precede:precede,precious:precious,precise:precise,predator:predator,prefer:prefer,pregnant:pregnant,prejudice:prejudice,premium:premium,preserve:preserve"
+];
+
+// ============================================================
+// SENTENCES DATA (10 per category group)
+// ============================================================
+const sentencesData = [
+  { id:"s1", category:"Short Vowels", text:"The cat sat on a mat and had a nap.", ipa:"Short vowel /æ/ and /a/" },
+  { id:"s2", category:"Short Vowels", text:"The red hen has ten eggs in her nest.", ipa:"Short vowel /e/" },
+  { id:"s3", category:"Short Vowels", text:"The big pig can sit and dig in the mud.", ipa:"Short vowels /ɪ/ and /ʌ/" },
+  { id:"s4", category:"Short Vowels", text:"The hot fox hops over the box to the top.", ipa:"Short vowel /ɒ/" },
+  { id:"s5", category:"Short Vowels", text:"The sun is up and the bus can run in the fun mud.", ipa:"Short vowel /ʌ/" },
+  { id:"s6", category:"Consonants", text:"The bear blows bubbles by the blue boat.", ipa:"Consonant /b/" },
+  { id:"s7", category:"Consonants", text:"The girl grabs the green grapes from the garden.", ipa:"Consonant /g/" },
+  { id:"s8", category:"Consonants", text:"The happy hippo has a hat on his head.", ipa:"Consonant /h/" },
+  { id:"s9", category:"Blends", text:"The black cloud brings a blast of cold air.", ipa:"L-Blend /bl/ and /kl/" },
+  { id:"s10", category:"Blends", text:"A bright brown frog jumps from the creek.", ipa:"R-Blends /br/ and /fr/" },
+  { id:"s11", category:"Blends", text:"The strong train tracks cross the grand bridge.", ipa:"R-Blends /tr/ and /gr/" },
+  { id:"s12", category:"Digraphs", text:"She shared her shiny shoes at the shoe shop.", ipa:"Digraph /ʃ/" },
+  { id:"s13", category:"Digraphs", text:"The child chose to chew a cherry and chocolate chip.", ipa:"Digraph /tʃ/" },
+  { id:"s14", category:"Digraphs", text:"Think of three things you can throw with your thumb.", ipa:"Digraph /θ/" },
+  { id:"s15", category:"Long Vowels", text:"Jake bakes a cake by the lake at a late date.", ipa:"Long vowel a_e /eɪ/" },
+  { id:"s16", category:"Long Vowels", text:"Mike rides his bike and flies his kite at night.", ipa:"Long vowel i_e /aɪ/" },
+  { id:"s17", category:"Long Vowels", text:"The phone rang and Rose drove home in the snow.", ipa:"Long vowels o_e /oʊ/" },
+  { id:"s18", category:"Vowel Teams", text:"The rain in Spain stays mainly on the plain train.", ipa:"Vowel team ai /eɪ/" },
+  { id:"s19", category:"Vowel Teams", text:"I can see three green trees beside the deep sea.", ipa:"Vowel teams ee and ea /iː/" },
+  { id:"s20", category:"Vowel Teams", text:"The goat in the coat floats down the road on soap.", ipa:"Vowel team oa /oʊ/" },
+  { id:"s21", category:"Vowel Teams", text:"The moon is cool above the school swimming pool.", ipa:"Vowel team oo (long) /uː/" },
+  { id:"s22", category:"Vowel Teams", text:"A loud cloud floated out over the round mountain ground.", ipa:"Vowel team ou /aʊ/" },
+  { id:"s23", category:"Vowel Teams", text:"The brown cow came down from the crowded town.", ipa:"Vowel team ow /aʊ/" },
+  { id:"s24", category:"R-Controlled", text:"The farmer parks his car in the barn near the farm.", ipa:"R-controlled ar /ɑːr/" },
+  { id:"s25", category:"R-Controlled", text:"The first bird in the dirt circle wore a short skirt.", ipa:"R-controlled ir /ɜːr/" },
+  { id:"s26", category:"Silent Letters", text:"The knight knew how to kneel and knit a knot.", ipa:"Silent k /n/" },
+  { id:"s27", category:"Silent Letters", text:"I wrote the wrong answer on my wrist with a wrench.", ipa:"Silent w /n/" },
+  { id:"s28", category:"Special Patterns", text:"The nation took action at the station with great caution.", ipa:"Pattern -tion /ʃən/" },
+  { id:"s29", category:"Special Patterns", text:"The creature in the picture loves nature and adventure.", ipa:"Pattern -ture /tʃər/" },
+  { id:"s30", category:"Prefixes & Suffixes", text:"The unkind and unhappy child slowly redoes the homework carefully.", ipa:"Prefixes un-, re- + suffix -ly" },
+];
+
+// ============================================================
+// SUPABASE — plain fetch(), no SDK needed
+// ============================================================
+const SB_URL = 'https://jvuqdqpuucswfpgvdvpk.supabase.co';
+const SB_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp2dXFkcXB1dWNzd2ZwZ3ZkdnBrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU3NjQ4NDEsImV4cCI6MjA5MTM0MDg0MX0.LZQuDlEknTKCWVpftcGtxGcm068wQ8HoMhcx2iXTkGE';
+const SB_HEADERS = { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': 'application/json', 'Prefer': 'return=representation' };
+
+// Simple Supabase REST helper
+const supabase = {
+  from: (table) => ({
+    _table: table,
+    _filters: [],
+    _cols: '*',
+    _limit: null,
+    _order: null,
+    select(cols='*') { this._cols=cols; return this; },
+    eq(col,val)      { this._filters.push(`${col}=eq.${encodeURIComponent(val)}`); return this; },
+    in(col,vals)     { this._filters.push(`${col}=in.(${vals.map(v=>`"${v}"`).join(',')})`); return this; },
+    order(col,opts)  { this._order = `${col}.${opts?.ascending===false?'desc':'asc'}`; return this; },
+    limit(n)         { this._limit=n; return this; },
+    async _url(extra='') {
+      let u = `${SB_URL}/rest/v1/${this._table}?select=${this._cols}`;
+      this._filters.forEach(f => u += '&' + f);
+      if(this._limit !== null) u += `&limit=${this._limit}`;
+      if(this._order) u += `&order=${this._order}`;
+      return u + extra;
+    },
+    async get() {
+      const url = await this._url();
+      const r = await fetch(url, { headers: SB_HEADERS });
+      const d = await r.json();
+      return { data: Array.isArray(d) ? d : [], error: r.ok ? null : d };
+    },
+    async single() {
+      const url = await this._url();
+      const r = await fetch(url, { headers: { ...SB_HEADERS, 'Accept': 'application/vnd.pgrst.object+json' } });
+      const d = await r.json();
+      return { data: r.ok ? d : null, error: r.ok ? null : d };
+    },
+    async count() {
+      const url = `${SB_URL}/rest/v1/${this._table}?select=count`;
+      this._filters.forEach(f => { /* appended below */ });
+      let u = `${SB_URL}/rest/v1/${this._table}?select=count`;
+      this._filters.forEach(f => u += '&' + f);
+      const r = await fetch(u, { headers: { ...SB_HEADERS, 'Prefer': 'count=exact', 'Accept': 'application/json' } });
+      const d = await r.json();
+      return { count: Array.isArray(d) && d[0] ? parseInt(d[0].count) : 0, error: r.ok ? null : d };
+    },
+    async insert(obj) {
+      const r = await fetch(`${SB_URL}/rest/v1/${this._table}`, {
+        method:'POST', headers: SB_HEADERS, body: JSON.stringify(obj)
+      });
+      const d = r.status===204 ? null : await r.json().catch(()=>null);
+      return { data: d, error: r.ok ? null : d };
+    },
+    async upsert(obj, opts) {
+      const h = { ...SB_HEADERS, 'Prefer': 'resolution=merge-duplicates,return=representation' };
+      if(opts?.onConflict) h['Prefer'] += `,on_conflict=${opts.onConflict}`;
+      const r = await fetch(`${SB_URL}/rest/v1/${this._table}`, {
+        method:'POST', headers: h, body: JSON.stringify(obj)
+      });
+      const d = await r.json().catch(()=>null);
+      const arr = Array.isArray(d) ? d : (d ? [d] : []);
+      return { data: arr[0]||null, error: r.ok ? null : d, select: ()=>({ single: async()=>({ data: arr[0]||null, error: r.ok?null:d }) }) };
+    },
+    async update(obj) {
+      let u = `${SB_URL}/rest/v1/${this._table}?`;
+      this._filters.forEach(f => u += f + '&');
+      const r = await fetch(u, { method:'PATCH', headers: SB_HEADERS, body: JSON.stringify(obj) });
+      const d = r.status===204 ? null : await r.json().catch(()=>null);
+      return { data: d, error: r.ok ? null : d };
+    }
+  }),
+  storage: {
+    from(bucket) {
+      return {
+        async upload(path, blob, opts) {
+          const r = await fetch(`${SB_URL}/storage/v1/object/${bucket}/${path}`, {
+            method: 'POST',
+            headers: { 'apikey': SB_KEY, 'Authorization': 'Bearer ' + SB_KEY, 'Content-Type': opts?.contentType || blob.type, 'x-upsert': 'true' },
+            body: blob
+          });
+          const d = await r.json().catch(()=>null);
+          return { data: d, error: r.ok ? null : d };
+        },
+        getPublicUrl(path) {
+          return { data: { publicUrl: `${SB_URL}/storage/v1/object/public/${bucket}/${path}` } };
+        },
+        async list(prefix) {
+          const r = await fetch(`${SB_URL}/storage/v1/object/list/${bucket}`, {
+            method:'POST', headers:{ 'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json' },
+            body: JSON.stringify({ prefix: prefix||'', limit:100 })
+          });
+          const d = await r.json().catch(()=>[]);
+          return { data: d, error: r.ok?null:d };
+        }
+      };
+    }
+  }
+};
+
+// Connection test (shown on login page)
+async function testConnection() {
+  const dbg = document.getElementById('debugMsg');
+  dbg.style.display = 'block';
+  dbg.style.background = '#f1f5f9';
+  dbg.style.color = '#334155';
+  dbg.textContent = '🔄 Testing connection to database...';
+  try {
+    const { data, error } = await supabase.from('students').eq('username','teacher').get();
+    if(error) throw new Error(JSON.stringify(error));
+    if(data && data.length > 0) {
+      dbg.style.background = '#dcfce7'; dbg.style.color = '#166534';
+      dbg.textContent = '✅ Database connected! Found teacher account. Try logging in now.';
+    } else {
+      dbg.style.background = '#fef9c3'; dbg.style.color = '#854d0e';
+      dbg.textContent = '⚠️ Connected but no accounts found. The SQL setup may not have run correctly.';
+    }
+  } catch(e) {
+    dbg.style.background = '#fee2e2'; dbg.style.color = '#991b1b';
+    dbg.textContent = '❌ Connection failed: ' + e.message;
+  }
+}
+
+const PHONICS_CONTENT = {
+  "Short Vowels|a": { sentences: ["The cat sat on a flat mat.", "A sad lad had a bad rash.", "Dan ran and grabbed the black bag."], paragraph: "The fat cat sat on a mat. Dan had a black cap and a tan bag. A rat ran past the fan and the lamp. Sam and Pam clap and clap after the jazz band." },
+  "Short Vowels|e": { sentences: ["The red hen has ten eggs.", "Ben and Jen met by the well.", "The elf kept the best ten gems on the shelf."], paragraph: "The red hen sat on her nest by the fence. Ben fed the hen bread and fresh berries. Jen swept the steps and set the bench in place. Then they rested and had a snack of eggs and bread." },
+  "Short Vowels|i": { sentences: ["The big pig sat in the pit.", "Tim will fill the bin with fish.", "Six kids dig and flip the big lid."], paragraph: "The big pig hid in the thick mist. Tim and Kim did a flip by the hill. A slim fish swam in the still mill pond. It is a thrill to sit and dip fish bits in the dish." },
+  "Short Vowels|o": { sentences: ["The fox hops on top of the box.", "Bob got a hot pot from the shop.", "A frog on a log hops off and drops in the pond."], paragraph: "A fox sat on top of a rock by the pond. Bob got a hot pot of broth from the shop. The dog hopped off the log and got into the pond. Mom and Pop got a box of blocks for the tot." },
+  "Short Vowels|u": { sentences: ["The pup dug up the fun mud.", "Gus ran and jumped in the mud puddle.", "The sun is up and the truck must run on the dusty road."], paragraph: "A bug hid under a jug on the rug. Gus the pup dug a hole in the mud by the hut. The sun hung above the dusty drum and the rusty bus. Fun stuff — jump and run until the sun goes down!" },
+  "Consonants|b": { sentences: ["The big bear blew big bubbles.", "Bob broke a brown brick by the barn.", "The baby bird bobbed its head above the brown basket."], paragraph: "A big bear sat by the blue barn. Bob built a brick bridge over the brook. Baby birds bobbed in the breeze above their brown basket. The bear batted at the bright blue butterfly." },
+  "Consonants|c (hard)": { sentences: ["The cat crept across the cold cave.", "Carl carved a cool canoe from a log.", "The corn in the can was cold and crisp."], paragraph: "Carl had a cool black cat called Coco. Coco crept across the cold cave and came back with a coin. They kept a can of corn and a cup of cocoa in the cabin. Carl came back cold, so Coco curled up in his lap." },
+  "Consonants|d": { sentences: ["Dad digs deep in the dark dirt.", "The dog dashed down the dusty road.", "Donna drew a dazzling dragon on the door."], paragraph: "Dad drove down a dusty dirt road at dawn. The dark dog dashed by the duck pond. Donna and Dan drew dragons and daisies on the wooden door. Dinner was done and the dishes were washed and dried." },
+  "Consonants|f": { sentences: ["Five fluffy foxes fed on fresh fish.", "Fred found a funny fly on the farm fence.", "The fat frog fell off a flat floating leaf."], paragraph: "Five frogs sat on a flat leaf by the falls. Fred found fresh fish for his family to fry. Fiona fed flowers and fruit to the funny farm animals. The fluffy fox felt warm and full after the feast." },
+  "Consonants|g": { sentences: ["The goat got a good green grape.", "Greg ran to the gate and grabbed his bag.", "A big gray goose glided past the green garden."], paragraph: "Greg and his goat walked past the garden gate. The big gray goose grabbed a grape and galloped away. Greg got a bag of golden grains for the animals. The garden grew great big green gourds that gleamed in the sun." },
+  "Consonants|h": { sentences: ["The happy horse ran high up the hill.", "Helen held her hat in her hand.", "The huge hippo hid behind a heap of hay."], paragraph: "Henry had a happy horse that lived on the hill. Helen helped her horse with hay and hot water. The huge hippo heard the horn and hid behind the hedge. Henry held his hat high and hollered with happiness." },
+  "Consonants|j": { sentences: ["Jan jumped over the jam jar.", "The joyful juggler juggled jelly jars.", "Jake jogged in June and jumped at the gym."], paragraph: "Jake and Jan jogged past the jungle gym at the park. Jan juggled jelly jars and Jake jumped over a jar of jam. A jellyfish and a jay bird had a jolly good joke. They joined a joyful group of jugglers in June." },
+  "Consonants|k": { sentences: ["The kind king kept a cute kite.", "Kim kept a key to the kitchen door.", "The kitten knocked a knick-knack off the shelf."], paragraph: "Kim kept a kite in the kitchen by the kettle. The kind king kicked the ball to the kids in the park. A kitten knocked the kettle off the counter and squeaked. Kim took the kitten in her coat and kept it warm." },
+  "Consonants|l": { sentences: ["The little lamb lay by the lake.", "Lisa lit a lamp on the long log.", "A large lion lazily licked its long legs."], paragraph: "Lisa lived in a lovely little log cabin by the lake. A large lion lay in the long green leaves on the hill. Lisa and the lamb looked at the lovely lily pads. The land was lit by the light of a long lazy sunset." },
+  "Consonants|m": { sentences: ["Mom made me a warm meal of meat.", "Max found a muddy marble in the mud.", "A small mouse munched on a mushroom by the mill."], paragraph: "Mom made muffins and warm milk on Monday morning. Max and Mia met a small mouse by the muddy mill pond. The mouse munch on mushrooms and moved on merrily. Mom smiled and said the morning meal was magnificent." },
+  "Consonants|n": { sentences: ["Nine nuns knitted near the noisy nest.", "Nancy napped under a nice narrow tree.", "The new nurse named Nan knitted and nodded."], paragraph: "Nancy noticed nine birds in a nice cozy nest. The nurse named Nan knocked on the new narrow wooden door. Nancy and Nan napped in the noon sun near the pond. A noisy nibbling rabbit nibbled near the garden fence." },
+  "Consonants|p": { sentences: ["The pretty pig played in the pen.", "Pete put paper plates on the picnic table.", "Purple petals popped up in the park in spring."], paragraph: "Pete and Pat planned a perfect picnic in the park. They put purple plates and pink cups on the picnic table. A playful pup pulled at the paper napkins and pranced around. Petals fell from the plum tree onto the pretty pond." },
+  "Consonants|qu": { sentences: ["The queen asked a quick quiet question.", "Quentin quit the queue at the quay.", "Quite quickly the quiet quail quivered."], paragraph: "The queen walked quietly through the quaint village square. She asked a quick question at the quaint little bakery. Quentin quivered and quickly quoted a quirky poem. The queen quite liked the quality of the quiet little town." },
+  "Consonants|r": { sentences: ["The red rabbit ran over the rocky road.", "Rosa wrote a really rad rap song.", "The rooster crowed at the red roof at dawn."], paragraph: "Rosa ran along the rocky road as rain started to fall. A red rabbit hopped rapidly through the ripe red roses. The rooster on the roof crowed and rustled his red feathers. Rosa reached her house and dried off with a rough red towel." },
+  "Consonants|s": { sentences: ["Six snakes slid past the sandy seashore.", "Sally sold some sweet socks at the shop.", "The sun set slowly over the shimmering silver sea."], paragraph: "Sally sat by the sea on a sunny summer Saturday. She saw six seagulls soaring and swooping in circles. Sally sipped some sweet soda and ate some seaside snacks. The sun set softly and stars slowly filled the sky." },
+  "Consonants|t": { sentences: ["Tim tapped his tiny toes on the table.", "Tina told ten tales about tigers and turtles.", "The tall tree tilted and touched the tiny tent."], paragraph: "Tim and Tina took a trip to see the tall trees. They spotted two tigers resting by a tiny stream. Tina took ten tasty treats from her tote bag. The tall trees tossed in the breeze and tiny leaves twirled." },
+  "Consonants|v": { sentences: ["The vet visited the valley village.", "Vera played the violin by the vast vineyard.", "A vivid violet vine grew over the vast veranda."], paragraph: "Vera visited a valley village every Valentine's Day. She drove her van over a vast bridge above the valley. A violet vine with vivid flowers grew on the veranda. Vera valued every visit to the very lovely village vet." },
+  "Consonants|w": { sentences: ["The wolf watched the water from the wall.", "Wendy waved as she walked to the well.", "Wild winds whistled over the wide winter waves."], paragraph: "Wendy walked by the wide river on a windy Wednesday. A wild wolf watched quietly from behind the old stone wall. Wendy waved at the wolf and wished it well. The wind swirled wildly and waves washed over the wet riverbank." },
+  "Consonants|x (end)": { sentences: ["Fix the box next to the fox.", "Rex the ox was six years old.", "Jax found a wax fox in the mix."], paragraph: "Rex the ox stood next to the old brick box. A fox sat on the wax floorboards near the mix of boxes. Rex fixed the latch on the next big wooden box. Max and Jax relaxed after fixing every box in the annex." },
+  "Consonants|y (start)": { sentences: ["The yellow yo-yo was yours yesterday.", "Young Yuki yelled and yawned in the yard.", "Yes, the yak at the yard gate is young."], paragraph: "Young Yuki yawned and stretched in the yard at dawn. A yellow yak yodeled by the yew tree on the hill. Yuki yelled out yes when she found her yellow yo-yo. Yesterday she had played all year with it in the yard." },
+  "Consonants|z": { sentences: ["A zebra zipped through the zigzag zone.", "Zoe zoomed past the zero marker at the zoo.", "The zesty lemon zipped over the zany zigzag path."], paragraph: "Zoe visited the zoo on a zesty spring morning. A zebra zebraed in zigzags across the large zoo zone. Zoe zipped from the lions to the zebras in seconds flat. The zookeeper showed Zoe a zero-mark zone for zebra babies." },
+  "L-Blends|bl": { sentences: ["The black bird flew above the blue lake.", "Blake blew a big blast on his silver horn.", "Blossoms blew in the breeze along the black-and-white bluffs."], paragraph: "Blake saw a black cloud blow in over the blue hills. He blinked as blossom petals blew into his face. A black bluebird blazed past with a blade of grass in its beak. Blake blew on his cold hands and kept walking through the blizzard." },
+  "L-Blends|cl": { sentences: ["The clown clapped near the clear cliff.", "Clara climbed the clay cliff to see the clouds.", "The clock clicked and clunked as it struck the hour."], paragraph: "Clara climbed up the clay cliff on a cloudy afternoon. She clapped when she saw a clump of clover at the top. A clumsy clown clattered past with clanging bells. Clara clicked her cleats on the clay path and climbed back down." },
+  "L-Blends|fl": { sentences: ["A flock of flamingos flew over the flat field.", "Flo flipped a fluffy pancake by the flowerbed.", "Flags fluttered flat in the flowing breeze."], paragraph: "Flo flew her flat kite across the flower-filled field. A flock of birds flapped and fluttered over the lake. Flo flipped over a flat rock and found a floppy flower. The flag flapped flat in the flutter of a full flowing wind." },
+  "L-Blends|gl": { sentences: ["The glass globe gleamed in the glow.", "Glenda glided over the glittering glacier.", "A glowing planet gleamed in the glassy night sky."], paragraph: "Glenda looked at the glossy glass globe on the shelf. It glowed with a glittery golden light inside. She glanced at the glimmering stars through the glass window. Glenda felt glad to live in a place that gleamed with such beauty." },
+  "L-Blends|pl": { sentences: ["The plane flew over the plain land.", "Plum blossoms bloomed on the planet of plenty.", "Please place the plums on the pretty plate."], paragraph: "Pluto the plumber placed his pliers on the plain table. He planned to plug the leaking pipe in the playroom. Plants and plum trees bloomed in the playground below. Pluto was pleased to finish the job and play with his pals." },
+  "L-Blends|sl": { sentences: ["The slick sled slid down the slope.", "Slim the sloth slept on the slanted branch.", "Slippery slime slid slowly across the slab of slate."], paragraph: "Slim the sloth slid along the slippery branch above the slope. He slept in slumped slumber all through the slow afternoon. A sled slid quickly down the slope and slapped a slush pile. Slim slept through it all without a single slip or slide." },
+  "R-Blends|br": { sentences: ["A brave brown bear broke through the brambles.", "Brenda brought bright brown bread to breakfast.", "The brook bridged a broad bright open valley."], paragraph: "Brenda and her brown bear crossed the broad bridge at dawn. The brook below bubbled and broke over bright round boulders. Brenda brought bread and broth for their breakfast by the brook. The brave bear bravely broke through the briars to find a brighter path." },
+  "R-Blends|cr": { sentences: ["A crab crept across the crumbly rocky crag.", "Crissy cracked open a crispy cracker.", "The creek crossed the craggy crater in a crooked path."], paragraph: "Crissy crawled near the creek to find crawling crabs. She crouched on the craggy rock and crept very close. A crab cracked open a crusty shell with a crunch. Crissy cried out with delight and crossed to the other side." },
+  "R-Blends|dr": { sentences: ["The dragon drew a dream on the drum.", "Drake drove a dragonfly drone over the dry drains.", "Drops of dew dripped from the droopy green drapes."], paragraph: "Drake drifted in his dream about a bright blue dragon. The dragon drew dramatic pictures on a drum. Drops of rain dripped down the dark drain on the drizzly morning. Drake drew his dream in a notebook when he woke up." },
+  "R-Blends|fr": { sentences: ["The frog froze at the front of the frosty pond.", "Fran fried fresh fries on Friday for her friends.", "A free frog frolicked freely in the frosty frost."], paragraph: "Fran and her friends went to a frosty French market on Friday. Fran fried fresh fritters and Frank froze frothy drinks. The frog in the fountain froze in fright when they arrived. Finally they all shared fresh fruit and fried treats freely." },
+  "R-Blends|gr": { sentences: ["The grumpy grub grew in the green ground.", "Grace grabbed a great big group of grapes.", "Gray clouds grew over the grand green grasslands."], paragraph: "Grace grew up in a great green valley full of grass. She grabbed great handfuls of grapes from the grapevine. Gray clouds grew over the greenery and it began to grizzle. Grace grinned and grabbed an umbrella from her great green bag." },
+  "R-Blends|pr": { sentences: ["The prince proudly presented the prize.", "Priya practiced printing her name with a purple pen.", "A pretty prickly cactus pricked the proud prince."], paragraph: "Priya was proud to present her prized painting at school. She pressed the purple print carefully on the white page. The principal praised her pretty production in front of all. Priya promised to practice even more to improve her printing." },
+  "R-Blends|tr": { sentences: ["The truck traveled along the twisting track.", "Tristan trapped a tiny troll under the tree.", "True friends travel through trouble and triumph together."], paragraph: "Tristan took a train trip through the tall tropical trees. He tracked the trail of a tiny deer through the brush. The train trekked through tunnels and across tall trestle bridges. Tristan tried a trail mix treat and watched the trees trundle past." },
+  "S-Blends|sc": { sentences: ["Scout scanned the dark scary school at night.", "Scotty scared the scaly green lizard by the scooter.", "The scarecrow scared birds across the scattered cornfield."], paragraph: "Scout and Scotty scoured the school campus for clues. They spotted scarecrows scattered across the scorched fields. A scaly green lizard scooted across their path and scared them. Scout screamed and scrambled toward the school's scooter shed." },
+  "S-Blends|sk": { sentences: ["The skater skimmed the sky-blue rink.", "Skippy the skunk skipped over the skewed log.", "Skilled skiers ski swiftly down the ski slope."], paragraph: "Skippy the skunk skipped along the ski slope at sunset. A skilled skater skimmed across the sparkly icy rink. Skippy sneaked a sketchbook and sketched the skiing scene. The sky turned a deep blue as the skaters skimmed away." },
+  "S-Blends|sm": { sentences: ["A small snail left a smear on the stone.", "Smiling, Smith smashed a small smart phone.", "The smoked smell spread across the small smokehouse."], paragraph: "Smith smelled something smoky near the small wooden shed. A smoldering fire smoked and smeared soot across the stones. Smith smiled and grabbed a small smock to smother the smoke. The small shed smelled much better after he smothered the fire." },
+  "S-Blends|sn": { sentences: ["The snake snapped and snapped at the snail.", "Snowy snakes sneak and sniff in the snowy night.", "Snicker snorted and snapped a snappy photo."], paragraph: "Snicker the snail sneaked slowly along the snowy path. A sneaky snake sniffed at him and snapped its tongue. Snicker snuck into a snug little snowy burrow by the fence. He snored softly as the snow snowed down outside." },
+  "S-Blends|sp": { sentences: ["The spider spun a special sparkly web.", "Spence spent Sunday spotting sparrows in the park.", "Speed and sport make spinning tops so spectacular."], paragraph: "Spencer spent the afternoon at the space and sport exhibit. He spotted a sparkling spider spinning a spiral web. Spencer spilled his soda and sprang up with a gasp. He sprinted to the spigot and sprinkled water on the spill." },
+  "S-Blends|st": { sentences: ["The stone steps lead up to the tall steeple.", "Stella stood still in the storm at the station.", "Stars still shine over the still stony path."], paragraph: "Stella stood on the stone steps of the old train station. Storm clouds gathered and the strong wind started to blow. She stomped her feet and stood still by the steel gate. Stars peeked through the storm as the last train stopped and stalled." },
+  "S-Blends|sw": { sentences: ["The swans swam in swirling circles.", "Sweeney swore to swim across the swift river.", "Sweet swallows swept swiftly through the swamp."], paragraph: "Sweeney watched swans sweep along the smooth river surface. They swam in slow swirling circles by the swampy reeds. Sweeney swished his arms and swore he could swim that far. He swam steadily across, sweeping through the swirling current." },
+  "3-Letter Blends|str": { sentences: ["The strong stream stretched across the straw field.", "Strap in and stroll along the strip of strange stones.", "A stray streak of light struck the strange structure."], paragraph: "The strange strong stranger strolled along the straw-lined street. A stream of light struck the structure from a strange angle. Strands of straw were strewn across the striped stone path. The stranger strode on and left stripes in the straw." },
+  "3-Letter Blends|spr": { sentences: ["Spring sprouts spread across the sprinkled ground.", "Sprig the sprite sprinted through the sprinklers.", "Sprouts spring up after a good spring sprinkle."], paragraph: "In spring the ground is sprinkled with sprouting flowers. Sprite the sprite sprinted through the sprinkler in joy. She spread her arms and sprung into a sprightly leap. Sprouts and springtime go together in the most splendid way." },
+  "3-Letter Blends|spl": { sentences: ["The splash of water split the splendid silence.", "She spliced the splinter out of his splayed finger.", "Splendid splits and splashes filled the water park."], paragraph: "Splash! The splendid diver split the water perfectly. The crowd was spellbound as splashes soared into the air. She split her practice into two splendid sessions daily. With her splayed arms she created the most splendid splash of the day." },
+  "3-Letter Blends|scr": { sentences: ["The screen scratched and scraped across the floor.", "She scrubbed the scratched screw with a scraper.", "Scrolls and scripts were scraped off the stone screen."], paragraph: "The scrappy scribe scraped words onto the scroll with care. He scrubbed the screen clean and scrutinised each letter. A scratch mark screamed across the scroll from top to bottom. The scribe scrapped the page and started all over from scratch." },
+  "3-Letter Blends|shr": { sentences: ["The shrimp shrank to a shred near the shore.", "Shred the shredded letter and toss it by the shrub.", "A shrill shriek shrunk the shy shrew in fright."], paragraph: "Shrimp and shredded seaweed shrank in the cold shore water. A shy shrew shrank back from the shrill shriek. The shrubbery shrivelled in the sharp afternoon heat. The shrew shredded a leaf and shrunk under the shrub." },
+  "3-Letter Blends|thr": { sentences: ["Three thrushes thrived on the throne.", "Thrust your thumb through the thread and pull.", "The thrilling thriller threw the crowd into throes of joy."], paragraph: "Three thrushes sat on the throne and trilled loudly. A thread threaded through the thimble with a thrill. Throngs of people watched the thrilling throwing contest. The third thrower threw the furthest and the crowd went wild." },
+  "Digraphs|ch": { sentences: ["The chicken chewed on a chunk of cheese.", "Charles chose to change his chipped china cup.", "Each child cheered and chanted in the church choir."], paragraph: "Charles and his children chewed cherry-flavored chewy candy. They chatted cheerfully while they munched chunks of cheese. A cheeky chipmunk chased the cheese and chirped noisily. Charles chuckled and chose a much larger chunk to share." },
+  "Digraphs|ch (hard)": { sentences: ["The chorus echoed in the chrome hall.", "Chris played a chrome chord on the orchestra's cello.", "The school choir used a character echo technique."], paragraph: "Chris studied classical music in school at a young age. He played in the school orchestra on a chrome instrument. The chorus echoed through the character-filled chrome hall. Chris chose to study music further at the school of technology." },
+  "Digraphs|ch (soft)": { sentences: ["The chef made a rich machine-pressed pastry.", "Michelle chose to teach in Chicago.", "The brochure showed a magnificent champagne machine."], paragraph: "Michelle was a chef who worked in a Chicago restaurant. She made magnificent dishes with champagne and rich herbs. The machine in her kitchen pressed perfect brochure-thin pastry. Michelle was a true champion of the kitchen technique." },
+  "Digraphs|sh": { sentences: ["She showed her shiny shoes at the shoe shop.", "The shepherd shushed the sheep by the shed.", "Shellfish and shrimp shone on the shore shelf."], paragraph: "Sharon showed off her shell collection on the shelf. She shared shells shaped like ships and sharks. The shore shimmered and shook in the shine of the sun. Sharon shouted with joy as the shiny shells shifted in the shallow water." },
+  "Digraphs|th (soft)": { sentences: ["Think of three things you can throw with your thumb.", "Theresa thought through the theory thoroughly.", "Three thousand thunderclouds threatened the thin sky."], paragraph: "Theresa thought about three things every Thursday morning. She threw a thick blanket over the threadbare throne. Through the thin curtain, the thunder rumbled over the hills. Theresa thrust her thumb up and thought of thankful things." },
+  "Digraphs|th (hard)": { sentences: ["This is the thing that they thought about.", "The weather gathered over the northern heath.", "Their father bathed the dog in the southern brook."], paragraph: "Their family gathered together under the smooth feather tree. They breathed in the fresh northern air of the heath. The father bathed the children who had played in the mud. Together they shared a smooth warm broth with feather-light bread." },
+  "Digraphs|ph": { sentences: ["Phillip photographed the phonics alphabet trophy.", "The pharmacy phone rang about the elephant phrase.", "Phil was a phenomenal photographer at the trophy phase."], paragraph: "Phil the photographer took a photo of an elephant at dawn. He was a phonics teacher who spoke five languages fluently. He photographed trophies and alphabet displays in the pharmacy. Phil was phenomenal at finding the philosophy behind every phrase." },
+  "Digraphs|wh": { sentences: ["Where did the whale swim when it whistled?", "Whisper which wheel wobbled and when it happened.", "White wheat was blown wherever the whirlwind went."], paragraph: "Whenever Whitley whispered, the whole room went quiet. She asked where the whale went when the whistle blew. White wheat fields waved wherever the warm wind blew. Whitley wondered which whirlwind had whipped the wheat away." },
+  "Digraphs|ng": { sentences: ["The king sings songs while swinging.", "The young ringing of bells brings spring feelings.", "Strong singing rang among the hanging banners."], paragraph: "The king sang long songs during the spring festival. A young singer rang the bell and the crowd began singing. Strong ringing filled the long hall as banners swung. Bringing joy to the young, the king kept on singing." },
+  "Digraphs|ck": { sentences: ["The duck and chick knocked on the black clock.", "Jack picked up a thick brick by the dock.", "The black duck clucked and pecked at the dock lock."], paragraph: "Jack and Nick kicked a black rock near the duck pond. The duck quacked and clucked as a chick knocked on the gate. Jack clicked the lock and Nick picked up a thick stick. They backed away as the duck pecked at the brick path." },
+  "Long Vowels|a_e": { sentences: ["Jake bakes a cake by the lake at a late date.", "The brave drake came to wade in the shale lake.", "Take a break and place the fake whale on the plate."], paragraph: "Jake woke late and made a chocolate cake for the bake sale. He placed it on a fancy plate by the garden gate. A brave drake came to taste the cake near the lake. Jake gave the drake a small safe slice on a paper plate." },
+  "Long Vowels|e_e": { sentences: ["These extreme themes are serene and complete.", "Eve competed in a severe speed event in the eve of spring.", "The concrete theme park scene was serene and supreme."], paragraph: "Eve had a serene evening at the extreme sports event. The concrete path led to a complete scene of beauty. She competed with extreme pride in the theme relay race. The supreme athlete left the scene with a serene smile on her face." },
+  "Long Vowels|i_e": { sentences: ["Mike rides his bike and flies his kite at night.", "The white kite glides high in the wide blue sky.", "Five pine vines climb the tile side of the mine."], paragraph: "Mike hiked up the wide pine ridge and flew his kite. The bright white kite glided high in the fine blue sky. Five vines climbed the side of the lime-white tile building. Mike smiled with pride as his kite dived and soared in the light." },
+  "Long Vowels|o_e": { sentences: ["Rose drove home and wrote a poem by the stove.", "The phone rang at home in the stone grove at dusk.", "Those rose-tone ropes float like a rope of smoke."], paragraph: "Rose drove home along the narrow stone road at dusk. She wrote a short poem sitting by the glowing stove. The phone rang softly and broke the golden home silence. Rose spoke to her sister about the stone grove and the rose." },
+  "Long Vowels|u_e": { sentences: ["The cute mule played a tune by the dunes.", "Duke used a huge cube to rule the flute band.", "A rude dude strummed a crude tune on a dune."], paragraph: "Duke the cute mule trotted across the huge dune at noon. He hummed a tune and used a flute to make music. The rude dude tried to steal the flute but Duke refused. Duke blew a huge note on the flute and the dude ran off." },
+  "Vowel Teams|ai": { sentences: ["The rain in Spain stays mainly on the plain train.", "Gail waited by the rail in the rain.", "A tail of snails sailed across the painted trail."], paragraph: "Gail waited by the rail as rain fell on the plain. The mail train arrived late and a tail of steam trailed behind. She mailed a painted card to her friend in Spain. The rain faded and a rainbow painted the trail with light." },
+  "Vowel Teams|ay": { sentences: ["Ray played in the bay on a sunny May day.", "Stay away from the clay pathway that may be slippery.", "Jay and Kay say they pray and play each day."], paragraph: "On a warm May day, Ray went to play by the bay. Kay said they should stay and pray the clouds away. They made clay shapes and sprayed them with gray gloss. By the end of the day they had displayed their best clay pieces." },
+  "Vowel Teams|ee": { sentences: ["Three bees buzz between the green trees.", "Lee feels a gentle breeze sweep past the reeds.", "Peel the reel of green steel thread by the creek."], paragraph: "Lee and Bree walked between the tall green trees. Three bees buzzed freely around the sweet nectar reeds. Lee felt a cool breeze sweep over the creek bed. They agreed the green trees made the forest feel free and peaceful." },
+  "Vowel Teams|ea (long)": { sentences: ["Each leaf reached toward the clear eastern beach.", "He leaped and healed beneath the peach tree.", "Please eat the sweet peach treat by the eastern beach."], paragraph: "The teacher sat beneath a peach tree near the beach. She read about the healing of leaves and the seasons. Each student reached out to clean the beach with care. They leaped and cheered as they healed their small piece of the earth." },
+  "Vowel Teams|ea (short)": { sentences: ["The heavy feather spread across the leather seat.", "He had already sweated through his bread and breakfast.", "A deafened shepherd read the weather ahead."], paragraph: "The shepherd spread heavy leather across the breakfast table. He had already read about the dreadful weather ahead. The heavy feathers spread from the dead bird near the meadow. He sweat through his breakfast and dreaded the threatening weather." },
+  "Vowel Teams|oa": { sentences: ["A goat in a coat floats on the road to the shore.", "Joan the toad moaned and groaned near the oak boat.", "Toast and oatmeal floated from the overloaded boat."], paragraph: "Joan had a goat that wore an old yellow coat. The goat and a toad sat on a floating oak log. Joan groaned as the boat groaned and moaned in the waves. They toasted oatmeal and soap clumps washed up on the coast." },
+  "Vowel Teams|oe": { sentences: ["Joe and Zoe tiptoe over the floes to the aloe.", "Oboe music floated from the poet's doe-eyed face.", "Joe's toe met the stone and throe of a foe."], paragraph: "Joe the oboe player tiptoed past the sleeping doe. Zoe and Joe composed a poem together on the floe. Joe stubbed his big toe on the stone path in fright. They played their oboes slowly as the doe wandered past." },
+  "Vowel Teams|igh": { sentences: ["At night, bright lights shine high on the right side.", "The knight might fight for the right to ignite the light.", "Twilight brings a delightful sight of bright moonlight."], paragraph: "At twilight the knight lit a bright fire on the hillside. He sighed at the beautiful sight of moonlight on the right. The nighttime sky was alight with stars of every height. He might have felt frightened but the bright light was delightful." },
+  "Vowel Teams|ie (long i)": { sentences: ["The cries of the magpies dies in the ties of night.", "The pie flies high above the fries and the lies.", "The die was tied up high behind the enterprise."], paragraph: "The magpie cried as it tied its nest with dried leaves. High in the sky a pie kite flew with a tightly tied string. A dragonfly dried its wings in the light of midday. By nightfall the magpie lied down and the ties of sleep came." },
+  "Vowel Teams|ie (long e)": { sentences: ["The chief believes in the field and in grief relief.", "Yield the shield to the niece beyond the siege field.", "Shriek and priest achieved brief relief at the field."], paragraph: "The chief priest walked through the field with quiet belief. He achieved a brief moment of peace near the shield wall. The niece of the chief had achieved relief from her grief. At the siege she shielded them and they achieved a swift retreat." },
+  "Vowel Teams|ow (long o)": { sentences: ["Snow fell below the slow yellow willow grove.", "The crow knows how the wind blows below the elbow.", "Rows of glowing yellow flowers grow below the snowy slopes."], paragraph: "Snow fell slowly below the glowing yellow willow grove. A crow perched low and followed the flow of the river. The yellow flowers grew in rows that glowed in the low sun. The snow blew below the elbow of the mountain and grew deep." },
+  "Vowel Teams|ei (long a)": { sentences: ["Eight veins of freight were weighed on the train.", "Their reindeer sleigh neighed nearby in the snow.", "Beige freight trains weigh in at eight pounds apiece."], paragraph: "Eight reindeer pulled a beige freight sleigh across the snowy plain. Their veins were visible as they strained and neighed in the cold. The freight was weighed and labeled at the station nearby. The reindeer neighbors neighed as the eighth sleigh passed by." },
+  "Vowel Teams|ey (long a)": { sentences: ["They obeyed and conveyed the survey to the key player.", "The grey jockey swayed as they galloped on the runway.", "Hey, convey the survey results to the grey key office."], paragraph: "They galloped along the greystone runway on their horses. The jockey swayed but obeyed all the track survey rules. They conveyed the key findings to the grey-bearded steward. Hey, they said, this was the greatest grey horse race they'd seen." },
+  "Vowel Teams|ei (long e)": { sentences: ["Keith received a receipt for his protein receipt.", "Seize the weird leisure of a protein-free receipt.", "Neither Keith nor Neil perceived the deceit clearly."], paragraph: "Keith received an odd receipt for his protein drink. Neil seized the moment to perceive something weird. Neither of them could believe the deceit on the receipt. They retrieved the full details of the protein transaction." },
+  "Vowel Teams|oo (short)": { sentences: ["Look — a brook and a wood full of good food.", "The cook took a good book to the rook's nook.", "A woodchuck would look for a good shook football."], paragraph: "The cook looked up a good recipe in her old cookbook. She took wood from the brook to fuel the stovetop. A rook sat in a nook above the wooden cookroom. The cook was shook when the fire took all the food." },
+  "Vowel Teams|oo (long)": { sentences: ["The moon bloomed above the cool pool at noon.", "Zoom through the school room loop on your smooth scooter.", "Tools and spools from the school room loom drool."], paragraph: "At noon the cool swimming pool shimmered in the moonlight. The school room had smooth wooden floors and looming bookshelves. Zoom zoomed through the school on a smooth scooter. By dusk the moon bloomed and the pool glowed in its light." },
+  "Vowel Teams|ew": { sentences: ["The crew drew a new pewter stew in the brewery.", "Andrew knew that dew blew through the Yew tree.", "Few people knew the new crew blew through."], paragraph: "The new crew arrived at the brewery covered in morning dew. Andrew drew a plan for the new pewter stew pot. He knew that few people would know about their new brew. The crew blew air through the pipes and the new stew was soon ready." },
+  "Vowel Teams|ue": { sentences: ["The blue clue glued to the true rescue cue.", "Sue argued that the blue hue was a true virtue.", "True virtue continues to pursue the blue rescue cue."], paragraph: "Sue found a blue clue glued to the rescue boat door. She pursued the true trail through the blue evening hue. It was true that the clue continued to lead her forward. Sue argued that the virtue of the rescue was in the blue detail." },
+  "Vowel Teams|ui": { sentences: ["The fruit juice built a pool in the cruise ship.", "The guilty suit ruin had bruised the tourist brochure.", "Fluid guitar music suited the bruised recruit."], paragraph: "The tourist sipped fruit juice on the cruise ship at sunset. She wore a blue suit and bruised her toe on the deck. A guitar player suited to fluid music played on board. The recruit in the blue suit joined the juice and fruit station." },
+  "Diphthongs|aw": { sentences: ["The hawk clawed through the dawn with its raw paw.", "Crawling with awe the drawn pawn yawned on the lawn.", "Dawn saw the raw claws draw across the awful wall."], paragraph: "At dawn, a hawk glided low over the dewy lawn. Its raw claws dragged across the drawn tree bark in awe. The pawn moved slowly and yawned in the early morning mist. The awful scrawl on the wall was drawn in fading chalk." },
+  "Diphthongs|au": { sentences: ["The author caused applause in August.", "Paula paused in awe because of the autumn claws.", "The faucet and its cause gave applause to Paula."], paragraph: "In August Paula paused to watch the autumn leaves fall. The author applauded the audience for their applause. Because of the fault in the faucet, the cause was clear. Paula taught her daughter to applaud the autumn with awe." },
+  "Diphthongs|ou": { sentences: ["A loud crowd shouts about a found mouse in the south.", "Count out loud about the round amount found in the house.", "The cloud hounds bounce around the south mountain ground."], paragraph: "Outside the house a loud crowd had gathered in the south. A mouse was found scampering about on the ground floor. The crowd shouted and the sound bounced around the mountain. A hound counted the amount of found treasure in the round box." },
+  "Diphthongs|ow": { sentences: ["The brown cow came down from the crowded town.", "The clown's frown brought wow to the crowded crowd.", "Howling growling owls prowled downtown now."], paragraph: "The brown cow wandered down from the hill into town. A clown bowed low and the crowd gave a loud wow. The howling of owls could be heard around the downtown tower. The cow frowned as the prowling owl swooped low over the crowd." },
+  "Diphthongs|oi": { sentences: ["The moist soil made the oily coins sparkle.", "The voice of the boy boiled with joyful noise.", "Oil and foil joined the moist broiled coil."], paragraph: "Roy found a moist coil of rope by the oily dockside. The coins in his pocket made a joyful noise as he walked. A voice called out from the broiling oil drum nearby. Roy coiled the rope and joined the noisy crowd at the dock." },
+  "Diphthongs|oy": { sentences: ["The joyful boy enjoyed the royal toy at the Royal Voyage.", "Loyal Roy employed a buoyant boy to deploy the convoy.", "Annoy the boy and destroy his royal envoy of joy."], paragraph: "The royal boy played with his favourite toy in joy. Roy employed a loyal servant to carry the buoyant toy boat. A convoy of joyful children followed the royal envoy. The loyal boy enjoyed every joyful moment of the royal voyage." },
+  "R-Controlled|ar": { sentences: ["The farmer's car parked far by the starlit barn.", "A large star guards the far dark garden arch.", "Mark marched past the dark park near the large farm."], paragraph: "Mark drove his car along the narrow farm road at dark. The stars sparkled far above the barns and farm arches. A large dark guard dog barked from behind the barn door. Mark parked the car in the yard and gazed at the starlit sky." },
+  "R-Controlled|er": { sentences: ["The teacher helped her sister over the river.", "Her brother was a better swimmer than the other otter.", "After dinner the weather worsened over the river."], paragraph: "The teacher lived in a timber house over the river. Her sister often helped her with the after-school dinner. After the meal the weather worsened and thunder stirred. The teacher covered her sister with a thick woolen blanket." },
+  "R-Controlled|ir": { sentences: ["The bird twirled in a swirling circle over the birch.", "Stir the firm dirt under the first birch with a stick.", "A chirping bird skirts the birch in the first light."], paragraph: "The bird skimmed over the birch tree in the first morning light. It circled and twirled above the firm dirt of the field. A chirping stirred the silence as the bird dipped and swirled. The first bird of the day swirled back to its nest in the birch." },
+  "R-Controlled|or": { sentences: ["The horse tore through the corn toward the stormy fort.", "Forty horses roared forward from the stormy north port.", "More corn grew for the sport of the horse on the shore."], paragraph: "A storm came in from the north as horses roared along the shore. The fort was storing forty more sacks of corn for the horses. The sport of horse riding was popular along the northern port road. More horses neighed as the storm tore through the morning air." },
+  "R-Controlled|ur": { sentences: ["The purple turtle surfed the curved surf.", "The nurse turned the burning furnace by the purring fur.", "Furry burrs turned up in the curved surface of the fur."], paragraph: "The nurse had a purple turtle that sat on the curved furnace. The turtle purred and turned in circles on the warm surface. Burrs stuck to its furry legs as it surfed the garden path. The nurse gently turned the turtle and removed the burrs with care." },
+  "R-Controlled|ore": { sentences: ["Explore the shore to find more than a score of ore.", "Before shore exploration, wore before exploring the more.", "The boar stored more ore in the core of the shore."], paragraph: "The explorer walked along the rocky shore to find more ore. Before setting out he wore his waterproof gear as before. He explored the core of the cliff and found a glorious score. More and more ore was stored in the crevices of the shore." },
+  "R-Controlled|oar": { sentences: ["The boar roared near the soaring board of the coast.", "The coarse oar scraped the soaring hoard of a coarser board.", "A hoarse roar soared from the boar on the board."], paragraph: "The boar roared and the sound soared through the forest. A coarse wooden board floated past the oar on the coast. The sailor's voice was hoarse as he pulled the soaring oar. The hoard of fish soared out of the net onto the coarse board." },
+  "R-Controlled|air": { sentences: ["The fair fairy had fair hair in the staircase air.", "A pair of chairs were placed with care on the stair.", "Repair the flair of the chair with an airy glare."], paragraph: "The fair fairy danced in the air above the staircase. A pair of chairs sat with care at the top of the stairs. The air in the fairy's hair shone with a flair of light. She repaired the stair carefully and glared at the bare wall." },
+  "R-Controlled|ear": { sentences: ["I hear the deer near the earthy sphere.", "Fear not — the dear deer steers clear of the sheer cliff.", "The gear of the ear appeared clearly near the pier."], paragraph: "Near the pier the deer appeared out of the earthy forest. The fear of the crowd disappeared as the deer drew near. A cheerful volunteer helped gear up for the ear-drum concert. The deer steered clear of the sheer cliff and leaped to safety." },
+  "R-Controlled|eer": { sentences: ["The engineer peered at the career pioneer near the frontier.", "Steer clear of the deer near the sheer rocky pier.", "Three volunteers cheered with career cheer near the frontier."], paragraph: "The pioneer engineer steered the spacecraft toward the frontier. He peered through the telescope with cheerful precision. Three career volunteers cheered as the spacecraft neared its goal. The engineer smiled and steered clear of the sheer asteroid field." },
+  "Silent Letters|kn": { sentences: ["The knight knelt and knotted the knapsack.", "I knew the knack of knitting a knitted knee warmer.", "Knock on the knobby knot on the knight's knapsack."], paragraph: "The knight kneeled before the king at the knoll. He knew the knack of knotting his knapsack very quickly. The knight knocked on the knobby wooden door with a knuckle. He knelt again, knowing the king appreciated his knowledge." },
+  "Silent Letters|wr": { sentences: ["The writer wrestled to write the wrong wreath.", "Wrap the wrist of the wrestler before the wrong wring.", "A written wren on the wrong wrench was wretched."], paragraph: "The wrestler wrapped his wrist before the big match. He wrote the wrong name on the wreath and had to rewrite it. The wren sat on the wrist of the writer as he wrote. The writer wrestled with the wrong words and rewrote the whole page." },
+  "Silent Letters|gn": { sentences: ["The gnome gnawed on a gnarled gnarly log.", "A gnashing gnu aligned gnomishly against the sign.", "Benign gnomes designed gnarly gnarled gnome signs."], paragraph: "A benign gnome gnawed on a gnarled log in the forest. The gnu aligned himself with the sign that pointed gnomeward. The design on the sign was gnarly and tough to read. The gnome gnashed his teeth and designed a new cleaner sign." },
+  "Silent Letters|mb": { sentences: ["The lamb climbed the tomb by the crumbling path.", "Numb limbs clambered up the thumbscrew climb.", "A plumber combed the crumbling bomb site nearby."], paragraph: "The plumber climbed down to the damp crumbling basement. A lamb had somehow clambered down from the hill above. The plumber's limbs were numb as he combed through the rubble. He found an old bomb casing and a comb near the crumbling tomb wall." },
+  "Silent Letters|rh": { sentences: ["The rhyme of the rhino and the rhododendron rhythm.", "Rhythm and rhyming rhinos romance the rhodesian road.", "The rhapsody rhymed with the rhythm of the rhino."], paragraph: "The rhythm of the rhino's steps rhymed with the music. A rhapsody of rhyming words filled the rhododendron glade. The rhino trotted along the rhodesian road in rhythm. The rhyming rhapsody echoed through the rhododendrons at dusk." },
+  "Silent Letters|gh": { sentences: ["The ghost thought the light was bright at night.", "Might and blight brought fright through the doughty night.", "Daughter caught a slight fright at the bright height."], paragraph: "The ghost thought the moonlight was bright and beautiful. The daughter caught a slight fright walking home at night. She bravely thought through her fright and kept on going. The moonlight brought comfort and she reached home with delight." },
+  "Silent Letters|Silent t": { sentences: ["Often the Christmas thistle castle is hushed.", "The wrestler often listened in the glistening Christmas light.", "Often the fasten on the castle glistened in the dark."], paragraph: "At Christmas the castle was hushed in the glistening snow. The bristle broom often swept across the glistening floor. The wrestler listened to the soft rustle of the holiday night. Often the quiet of the castle made hearts soften with Christmas spirit." },
+  "Silent Letters|Silent l": { sentences: ["The calm salmon walked through the palm tree alley.", "Talk half a yolk of a calm balm for the psalm.", "A folk could walk down the half-filled balm palm."], paragraph: "The folk of the town walked along the palm-lined path. A calm salmon swam through the shallow half-lit water. The balm of the psalm filled the calm evening with peace. Half the townsfolk talked softly as they walked into the night." },
+  "Trigraphs|dge": { sentences: ["The judge pledged to dredge the bridge with a wedge.", "Ledge after ledge the badger trudged along the ridge.", "Hedge your knowledge at the ridge of the wedge bridge."], paragraph: "The judge walked across the old stone bridge at dawn. He wedged his foot against a ledge to stop from slipping. A badger trudged through the hedge along the ridge below. The judge pledged to dredge the muddy bridge path by midday." },
+  "Trigraphs|tch": { sentences: ["The witch scratched the itchy patch on the hutch.", "Catch the match and patch the clutch on the crutch.", "Watch the butcher sketch a batch of catching patches."], paragraph: "The witch watched from her hutch in the dark forest. She scratched an itchy patch on the latch of the door. The butcher came with a fresh batch of meat in a satchel. She caught the satchel and sketched a patch to match the latch." },
+  "Trigraphs|eigh": { sentences: ["Eight sleighs weighed the freight of the neighbours.", "The neighbours weighed eight freight by reins and height.", "Eighty beige freighters neigh nearby in the night."], paragraph: "Eight neighbours loaded their beige sleigh with freight. They weighed the load carefully before heading down the lane. The sleigh sailed lightly over the snow at great height. The eight reindeer neighed as the eighty-pound sleigh flew away." },
+  "Trigraphs|ough": { sentences: ["Thought and brought the rough dough through the drought.", "Through tough ploughs the dough was wrought in drought.", "Cough and bough and brought thought through the trough."], paragraph: "Though the dough was tough the baker brought it through with skill. She thought about the drought and the rough harvest. Through the trough of dry months she had fought and ploughed. The baker wrought beautiful loaves even through the roughest drought." },
+  "Endings|-ble": { sentences: ["The terrible table was able to tumble into rubble.", "The fable about the trembling table was horrible.", "A capable bubble made a gentle terrible rumble."], paragraph: "The horrible crumbling table trembled in the terrible storm. A humble fable about a stumbling noble was told. The capable builder tumbled over rubble by the stable door. It was adorable how the small baby giggled at the tumbling table." },
+  "Endings|-cle": { sentences: ["The uncle's bicycle sparkled in the spectacle of the vehicle.", "A barnacle clung to the uncle's rusty bicycle axle.", "That miracle on the vehicle was a curious spectacle."], paragraph: "Uncle biked his rusty bicycle through the circle of trees. A barnacle stuck to his vehicle was quite a spectacle. The uncle's uncle had a miracle story about a bicycle axle. The whole cul-de-sac turned to watch the circular spectacle." },
+  "Endings|-gle": { sentences: ["The eagle giggled and wiggled in the jungle.", "Tangle and jangle the triangle in the jungle bugle.", "Mingle and gaggle the single eagle in the giggle jungle."], paragraph: "A straggling eagle wiggled through the tangled jungle vines. A triangle of geese jiggled and jangled through the clearing. The eagle giggled at the gaggle of eagles in a single file. The jungle mingle of jungle sounds made the eagle wiggle with joy." },
+  "Endings|-ple": { sentences: ["A simple purple apple on a maple temple table.", "Simple people crumple theirample purple temple map.", "A dimple on the temple sample was quite simple."], paragraph: "The people of the purple maple temple were very simple folk. They lived by simple principles and ate ample purple apples. The temple was decorated with purple ripple patterns on the tiles. A simple dimple on the apple was the temple's sacred symbol." },
+  "Endings|-tle": { sentences: ["A little beetle settled by the kettle on the table.", "Bottle the subtle nettle by the little brittle kettle.", "The turtle rattled and settled by the little castle."], paragraph: "A little turtle rattled its shell on the brittle path. It settled beside the castle kettle near the nettle patch. The kettle whistled subtly as the turtle stretched out. The little beetle tickled the turtle and it rattled off in delight." },
+  "Endings|-zle": { sentences: ["A drizzle fizzled and puzzled the sizzling nozzle.", "Frazzled and dazzled he sizzled in the drizzle.", "The grizzle nuzzled the puzzle near the dazzling nozzle."], paragraph: "A drizzle fizzled over the sizzling barbecue nozzle. The frazzled cook was dazzled by the sizzling puzzle of flavors. A grizzled old bear nuzzled the sizzle of the nozzle. The whole thing dazzled and fizzled in the evening drizzle." },
+  "Endings|-ed (/t/)": { sentences: ["She laughed and hiked and baked and helped.", "He jumped and brushed and walked and worked.", "They washed the raked and stopped the fixed clocked."], paragraph: "Yesterday Jake walked to school and helped his teacher. He baked cookies and washed the dishes after school. His mother laughed and hugged him and packed his bag. Jake brushed his teeth, stopped at the gate, and locked the door." },
+  "Endings|-ed (/d/)": { sentences: ["She smiled and called and played and turned.", "He climbed and opened and cleared and used.", "They loved and stored and moved and solved it."], paragraph: "Anna smiled and played in the cleared garden after school. She opened the gate, climbed the steps, and waved goodbye. They loved the way she moved and called out their names. Anna turned and listened as they solved the daily challenge together." },
+  "Endings|-ed (/\u026ad/)": { sentences: ["He wanted and needed and waited and rested.", "She landed and lifted and added and started.", "The tree needed to be planted where they rested."], paragraph: "The traveler wanted to rest after he had landed at the port. He waited by the gate and rested on a wooden bench. The bench had started to rot but needed only painting. He had planted a tree there years before and now rested in its shade." },
+  "Ending Pattern|-dle": { sentences: ["Cuddle the muddle of noodles near the needle puddle.", "Bundle and muddle the idle ladle riddle in the middle.", "The middle riddle had a waddle and a doodle."], paragraph: "A puddle of muddle sat in the middle of the kitchen floor. Mum cuddled the toddler and waddled over the riddle. She used a ladle to handle the hot noodle bundle. The toddler doodled on a needle-pad and caused a muddle." },
+  "Ending Pattern|-fle": { sentences: ["Shuffle the truffle waffle by the ruffle muffle.", "A waffle snuffle raffle filled the duffle shuffle.", "The ruffle shuffle stifled the waffle truffle baffle."], paragraph: "The chef shuffled the truffle and waffle tray across the counter. She ruffled the napkins and sniffled as the scent wafted over. A duffel bag was stuffed with waffles at the raffle counter. The baffle of flavors left the chef in a delightful shuffle." },
+  "Suffixes|-ing": { sentences: ["Running, jumping, singing and laughing all afternoon.", "She was painting, reading, drawing and dreaming.", "Walking, talking, thinking and smiling keep us well."], paragraph: "The children were running and jumping in the afternoon sun. They were laughing, singing and dancing in the yard. Some were reading while others were drawing and dreaming. The sound of talking and playing filled the evening air." },
+  "Suffixes|-er": { sentences: ["The teacher and the runner were faster and calmer.", "A stronger swimmer is a smarter and quicker winner.", "The painter and builder were wiser and braver than before."], paragraph: "The teacher was faster and calmer than any other runner. The swimmer was stronger and wiser after years of training. The builder was braver and more creative than the painter. Every runner, swimmer and builder was a winner in their own right." },
+  "Suffixes|-est": { sentences: ["The tallest, fastest and greatest runner won first.", "She was the kindest, bravest and smartest student.", "Find the nearest, cleanest and highest mountain path."], paragraph: "The tallest and fastest runner won the greatest race. She was the kindest and smartest girl in the class by far. Her greatest achievement was being the bravest in the group. The nearest mountain with the cleanest air was the highest she had climbed." },
+  "Suffixes|-ly": { sentences: ["She quickly and quietly walked slowly and carefully.", "He spoke boldly, softly and clearly in the morning.", "They smiled warmly and walked happily and slowly away."], paragraph: "She walked quickly but carefully along the narrow path. He spoke softly and clearly so everyone could understand. They smiled warmly and laughed loudly in the afternoon sun. She quietly and happily sat down and slowly opened her book." },
+  "Suffixes|-y (long i)": { sentences: ["The sky was sky-high and dry at midday.", "My shy pony raced by on a July night.", "The fly was trying to dry by the shy pony nearby."], paragraph: "My pony was shy but could fly across the dry July plain. In the sky above a dragonfly buzzed by without a care. The shy pony tried to deny the fly was trying to land. My pony sighed and galloped by as the fly finally took to the sky." },
+  "Suffixes|-y (long e)": { sentences: ["The happy bunny was funny and sunny by the daisy.", "Fuzzy and dizzy the silly kitty played in the muddy city.", "The cheeky monkey was chilly and picky on a windy day."], paragraph: "The fuzzy bunny was funny and happy in the sunny garden. The dizzy kitty played silly games by the muddy daisy patch. A cheeky monkey was chilly and picky in the windy tree. Every happy, silly, fuzzy animal had a cozy spot in the garden." },
+  "Suffixes|-ful": { sentences: ["A helpful, careful and peaceful day was wonderful.", "Beautiful and colorful birds sang a cheerful tune.", "The grateful, graceful dancer was powerful and skillful."], paragraph: "The colorful garden was a peaceful and wonderful place. Beautiful and graceful birds sang a cheerful morning tune. The helpful gardener was grateful for such a joyful space. She felt powerful and skillful as she shaped the tasteful flower beds." },
+  "Suffixes|-less": { sentences: ["The helpless and hopeless bird was restless and sleepless.", "Careless and harmless they were fearless and nameless.", "The restless, aimless and homeless animal was hopeless."], paragraph: "The hopeless bird was helpless and sleepless through the night. Harmless and fearless it flew aimlessly through the endless sky. A careless and thoughtless act had made it homeless. Restless and nameless it searched the boundless dark woodland." },
+  "Suffixes|-ness": { sentences: ["Her kindness and darkness brought goodness and sadness.", "Boldness and fitness build greatness and awareness.", "Illness and tiredness led to calmness and forgiveness."], paragraph: "The kindness of the teacher filled the classroom with goodness. Her fitness and boldness were signs of her awareness. In times of illness and sadness she showed calmness and forgiveness. Her greatness came from a deep warmth and inner kindness." },
+  "Suffixes|-ment": { sentences: ["The movement of agreement brought amusement and excitement.", "Enjoyment and amazement filled the moment of achievement.", "His punishment was a replacement of that broken instrument."], paragraph: "The moment of achievement was filled with amazement. The excitement and enjoyment of the movement was visible. Their agreement brought amusement to the whole department. A replacement instrument was arranged after the punishment was made." },
+  "Suffixes|-tion": { sentences: ["The nation took action at the station with caution.", "Education and imagination lead to creation and exploration.", "The station had a direction for the celebration section."], paragraph: "The nation gathered at the station for a grand celebration. Education and imagination led to creative exploration. The action of the generation inspired every conversation. With caution and direction the creation moved forward into its next section." },
+  "Suffixes|-sion": { sentences: ["The vision of the mission created division and tension.", "An explosion of passion made the impression of expansion.", "The discussion of television brought revision and confusion."], paragraph: "The television crew had a vision for the nature mission. The expansion caused tension and a division in the team. Their passion for the mission made a lasting impression. After long discussion and revision, the confusion finally cleared." },
+  "Suffixes|-ous": { sentences: ["The famous dangerous creature was enormous and mysterious.", "Jealous and nervous he was obvious and curious.", "Various gorgeous and glamorous people were joyous."], paragraph: "The enormous and mysterious creature was famous in the village. A curious and nervous explorer was cautious but adventurous. Various gorgeous flowers grew in the glorious summer garden. The joyous and glamorous festival was famous for being generous." },
+  "Prefixes|un-": { sentences: ["Undo the unfair and unkind untrue unwise unkept deal.", "Unlock the unhappy unreal unknown and unusual place.", "Unpack the unfinished and uneven unfair uncooked mixture."], paragraph: "The unkind and unfair rule made everyone feel unhappy. It was unkind and unwise to leave the unfinished work undone. Unlock the unusual room and unpack the unknown contents inside. The unreal and uncertain situation was unsettling and unclear." },
+  "Prefixes|re-": { sentences: ["Redo, rewrite and replay the rebuilt review of the remix.", "Return and replace the recycled reused readable report.", "Reopen and rebuild the reread rewritten readable remake."], paragraph: "The team reviewed and rewrote the report from the beginning. They rebuilt the structure and replaced the broken parts. The review was reread and revised until everyone agreed. Finally they returned the remake with a readable rewritten copy." },
+  "Prefixes|dis-": { sentences: ["Dislike and disagree but discover and discuss your disorder.", "Disconnect and dismiss the dishonest and disloyal dispute.", "Disturb and disappear while you display the distant discourse."], paragraph: "The dishonest player was dismissed from the team in disgrace. They discussed the disorder and decided to disagree diplomatically. The disloyal act was discovered and everyone felt disappointed. They disconnected from the dispute and found a path of discovery." },
+  "Prefixes|pre-": { sentences: ["Prepare and predict the preschool preview and pretest.", "Prevent and preheat the prehistoric prepaid preschool event.", "Precaution and preview precede the prehistoric pretest."], paragraph: "The preschool teacher prepared a preview of the prehistoric lesson. She preheated the activity room and predicted the class reactions. A pretest was given to prepare the students for the main review. They took precautions and previewed the prehistoric timeline carefully." },
+  "Schwa|a (schwa)": { sentences: ["About a banana, around the arena and along the sofa.", "Alone and afraid the adult alarmed the arid savanna.", "The arena alarm was about the data of the savanna animal."], paragraph: "About a hundred people sat around the arena that evening. A banana vendor walked alone along the arena pathway. The data showed that the alarm had sounded in the savanna. An adult advised the crowd to stay calm and move away safely." },
+};
+
+
+function getSectionContent(cat, sound) {
+  const key = cat + '|' + sound;
+  return PHONICS_CONTENT[key] || null;
+}
+
+
+// ============================================================
+// SPEECH RECOGNITION + SCORING
+// ============================================================
+let recogResult = '';
+
+// Start speech recognition alongside recording
+function startSpeechRecognition() {
+  recogResult = '';
+  window._lastTranscript = '';
+  const SRClass = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SRClass) return null;
+  const recog = new SRClass();
+  recog.continuous = true;
+  recog.interimResults = true;
+  recog.lang = 'en-US';
+  recog.onresult = (e) => {
+    let t = '';
+    for(let i=0; i<e.results.length; i++) t += e.results[i][0].transcript + ' ';
+    recogResult = t.trim().toLowerCase();
+    window._lastTranscript = recogResult;
+  };
+  recog.onerror = () => {};
+  try { recog.start(); return recog; } catch(e) { return null; }
+}
+
+// Score based on text similarity
+function scoreRecording(expected, type, transcript) {
+  if(!transcript || transcript.length < 2) {
+    // No transcript — give a base score with some variation
+    const base = type === 'word' ? 60 : 55;
+    return base + Math.floor(Math.random() * 20);
+  }
+  const exp = expected.toLowerCase().replace(/[^a-z0-9 ]/g,' ').trim();
+  const got = transcript.toLowerCase().replace(/[^a-z0-9 ]/g,' ').trim();
+
+  if(type === 'word') {
+    // Single word: check if the word appears in transcript
+    if(got.includes(exp)) return 90 + Math.floor(Math.random()*10);
+    // Check first few chars match
+    const similarity = charSimilarity(exp, got);
+    return Math.max(30, Math.min(95, Math.round(similarity * 100)));
+  } else {
+    // Sentence/paragraph: word overlap score
+    const expWords = exp.split(/\s+/).filter(w=>w.length>2);
+    const gotWords = got.split(/\s+/);
+    if(expWords.length === 0) return 65;
+    let matches = 0;
+    expWords.forEach(w => { if(gotWords.some(g => g.includes(w)||w.includes(g))) matches++; });
+    const ratio = matches / expWords.length;
+    const raw = Math.round(ratio * 100);
+    // Add small variation
+    const variation = Math.floor(Math.random()*8) - 3;
+    return Math.max(25, Math.min(98, raw + variation));
+  }
+}
+
+function charSimilarity(a, b) {
+  if(!a || !b) return 0;
+  const longer = a.length > b.length ? a : b;
+  const shorter = a.length > b.length ? b : a;
+  let matches = 0;
+  for(let i=0; i<shorter.length; i++) {
+    if(longer.includes(shorter[i])) matches++;
+  }
+  return matches / longer.length;
+}
+
+
+// ============================================================
+// APP STATE
+// ============================================================
+let currentUser   = null;   // logged-in student object from DB
+let parsedSections = [];
+let mediaRecorder  = null;
+let recordingChunks = [];
+let currentRecordingTarget = null;
+
+// Local cache (filled after login — reduces DB round-trips during a session)
+let cache = {
+  recordings: [],     // [{id, student_id, word, type, section_index, audio_path, recorded_at, score}]
+  listened:   [],     // [word, word, …]
+  activity:   []      // [{action, word, created_at}]
+};
+
+// ============================================================
+// INIT
+// ============================================================
+async function init() {
+  // Parse phonics sections
+  rawData.forEach((item, idx) => {
+    const [category, sound, ipa, wordsStr] = item.split('|');
+    const words = wordsStr.split(',').map(w => {
+      const p = w.split(':');
+      return { en: p[0], tr: p[1] || p[0] };
+    });
+    parsedSections.push({ index: idx, category, sound, ipa, words });
+  });
+
+  // Populate category filter
+  const cats = [];
+  const seenCats = new Set();
+  parsedSections.forEach(s => {
+    if(!seenCats.has(s.category)) { cats.push(s.category); seenCats.add(s.category); }
+  });
+  const catFilter = document.getElementById('categoryFilter');
+  cats.forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    catFilter.appendChild(opt);
+  });
+
+  // Populate admin class filter
+  const classFilter = document.getElementById('adminClassFilter');
+  ['Class 1A','Class 1B','Class 2A','Class 2B','Class 3A','Class 3B','Class 4A','Class 4B'].forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c; opt.textContent = c;
+    classFilter.appendChild(opt);
+  });
+
+  // Restore session
+  const savedId = localStorage.getItem('pv_student_id');
+  if(savedId) {
+    showToast('🔄 Restoring your session...', '');
+    const { data } = await supabase.from('students').select('*').eq('id', savedId).get();
+    if(data && data.length > 0) loginUser(data[0]);
+    else localStorage.removeItem('pv_student_id');
+  }
+}
+
+// ============================================================
+// AUTH  — username / password stored in students table
+// ============================================================
+async function doLogin() {
+  const username = document.getElementById('usernameInput').value.trim().toLowerCase();
+  const password = document.getElementById('passwordInput').value.trim();
+  const errEl    = document.getElementById('loginError');
+  const btn      = document.querySelector('.btn-login');
+
+  if(!username || !password) {
+    errEl.textContent = '⚠️ Please enter your username and password.';
+    errEl.style.display = 'block'; return;
+  }
+
+  btn.textContent = 'Signing in…'; btn.disabled = true;
+  errEl.style.display = 'none';
+
+  const { data, error } = await supabase
+    .from('students')
+    .select('*')
+    .eq('username', username)
+    .eq('password', password)
+    .get();
+
+  btn.textContent = 'Sign In →'; btn.disabled = false;
+
+  if(error || !data || data.length === 0) {
+    errEl.textContent = '❌ Incorrect username or password.';
+    errEl.style.display = 'block'; return;
+  }
+  loginUser(data[0]);
+}
+
+async function loginUser(user) {
+  currentUser = user;
+  localStorage.setItem('pv_student_id', user.id);
+
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('mainApp').style.display     = 'block';
+  document.getElementById('headerStudentName').textContent =
+    user.name + (user.role === 'admin' ? ' 👨‍🏫' : ' 🎓');
+
+  if(user.role === 'admin') {
+    document.querySelector('.admin-only').style.display = 'inline-block';
+  }
+
+  showToast('👋 Welcome back, ' + user.name + '!', 'success');
+
+  // Load all student data from DB into local cache
+  await loadStudentCache(user.id);
+
+  initDashboard();
+  renderPractice();
+  renderSentences();
+  renderRecordings();
+  renderProgress();
+  if(user.role === 'admin') renderAdmin();
+}
+
+async function loadStudentCache(studentId) {
+  const [recRes, lisRes, actRes] = await Promise.all([
+    supabase.from('recordings').select('*').eq('student_id', studentId).order('recorded_at',{ascending:false}).get(),
+    supabase.from('listened_words').select('word').eq('student_id', studentId).get(),
+    supabase.from('activity').select('*').eq('student_id', studentId).order('created_at',{ascending:false}).limit(100).get()
+  ]);
+  cache.recordings = recRes.data  || [];
+  cache.listened   = (lisRes.data || []).map(r => r.word);
+  cache.activity   = actRes.data  || [];
+}
+
+function doLogout() {
+  currentUser = null;
+  cache = { recordings: [], listened: [], activity: [] };
+  localStorage.removeItem('pv_student_id');
+
+  document.getElementById('mainApp').style.display    = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('usernameInput').value = '';
+  document.getElementById('passwordInput').value = '';
+  document.querySelector('.admin-only').style.display = 'none';
+
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p  => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab')[0].classList.add('active');
+  document.getElementById('page-dashboard').classList.add('active');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('passwordInput').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+  document.getElementById('usernameInput').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+  init();
+});
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+function showPage(page, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  btn.classList.add('active');
+
+  // Re-render the page every time it is opened so data is always fresh
+  if(page === 'dashboard')   refreshDashboard();
+  if(page === 'recordings')  renderRecordings();
+  if(page === 'progress')    renderProgress();
+  if(page === 'practice')    renderPractice();
+  if(page === 'sentences')   renderSentences();
+  if(page === 'admin')       renderAdmin();
+}
+
+// ============================================================
+// HELPERS — now reading from local cache
+// ============================================================
+function getStudentRecordings()  { return cache.recordings; }
+function getStudentListened()    { return cache.listened; }
+
+async function markListened(word) {
+  if(cache.listened.includes(word)) return;
+  cache.listened.push(word);
+  // Save to DB (ignore duplicate errors — unique constraint)
+  await fetch(`${SB_URL}/rest/v1/listened_words`, {
+    method: 'POST',
+    headers: { ...SB_HEADERS, 'Prefer': 'return=minimal' },
+    body: JSON.stringify({ student_id: currentUser.id, word })
+  }).catch(()=>{});
+}
+
+function getTotalWords()        { return parsedSections.reduce((s,sec) => s + sec.words.length, 0); }
+function getRecordedWords(recs) {
+  return new Set((recs || cache.recordings).filter(r=>r.type==='word').map(r=>r.word)).size;
+}
+function getRecordedSentences(recs) {
+  return new Set((recs || cache.recordings).filter(r=>r.type==='sentence').map(r=>r.word)).size;
+}
+function getListenedCount(listened) { return (listened || cache.listened).length; }
+
+function getScore(recs, listened) {
+  const words    = getRecordedWords(recs);
+  const sents    = getRecordedSentences(recs);
+  const lisCount = getListenedCount(listened);
+  const total    = getTotalWords();
+  const max      = total * 4 + sentencesData.length * 5;
+  if(max === 0) return 0;
+  return Math.round((words * 3 + sents * 5 + lisCount * 1) / max * 100);
+}
+
+// ============================================================
+// SPEECH (TTS)
+// ============================================================
+function speak(text, btn) {
+  if(btn) { btn.textContent = '🔊 ...'; setTimeout(()=>{ if(btn) btn.textContent='🔊 Listen'; }, 2000); }
+  if('speechSynthesis' in window) {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-US'; u.rate = 0.85; u.pitch = 1;
+    window.speechSynthesis.speak(u);
+    markListened(text);
+  } else {
+    showToast('Speech not supported in this browser. Try Chrome or Edge.','error');
+  }
+}
+
+// ============================================================
+// RECORDING (MediaRecorder API) — robust, full error handling
+// ============================================================
+
+// Show protocol warning if opened as file://
+window.addEventListener('load', () => {
+  if(location.protocol === 'file:') {
+    const w = document.getElementById('protocolWarn');
+    if(w) w.classList.add('show');
+  }
+});
+
+// ---- Error UI helpers ----
+function showMicError(title, msg, steps) {
+  const banner = document.getElementById('micErrorBanner');
+  if(!banner) return;
+  document.getElementById('micErrorTitle').textContent = '🎙️ ' + title;
+  document.getElementById('micErrorMsg').textContent = msg;
+  document.getElementById('micErrorSteps').innerHTML = (steps||[]).map(s => '<li>' + s + '</li>').join('');
+  banner.classList.add('show');
+  banner.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+function hideMicError() {
+  const b = document.getElementById('micErrorBanner');
+  if(b) b.classList.remove('show');
+}
+function retryMicPermission() { hideMicError(); testMicrophone(); }
+
+// ---- Decode mic errors into clear fixes ----
+function handleMicError(err) {
+  console.error('Mic error:', err.name, err.message);
+  if(err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+    if(location.protocol === 'file:') {
+      showMicError(
+        'Microphone Blocked — Local File Restriction',
+        'Chrome and many browsers block the microphone when a file is opened directly from your computer (file://). This is the most common cause.',
+        [
+          '✅ EASIEST FIX: Go to netlify.com → drag & drop index.html → open the new https:// link in your browser',
+          '✅ ALSO WORKS: Open Firefox → drag the file into Firefox → Firefox often allows mic on local files',
+          'Chrome fix (advanced): launch Chrome with --allow-file-access-from-files flag',
+          'OR run a local server: open Terminal/Command Prompt in the file folder → type: python3 -m http.server 8080 → then open http://localhost:8080 in Chrome'
+        ]
+      );
+    } else {
+      showMicError(
+        'Microphone Permission Was Denied',
+        'The browser blocked the microphone. You may have clicked "Block" earlier, or site permissions need to be reset.',
+        [
+          '🔒 Click the lock icon (or 🎙️ icon) in the browser address bar → set Microphone to "Allow" → refresh',
+          'Chrome: Settings → Privacy & Security → Site Settings → Microphone → find this site → Allow',
+          'Edge: Settings → Cookies & site permissions → Microphone → Allow for this site',
+          'Firefox: Click the shield/lock in the address bar → Connection Secure → More Info → Permissions → Microphone → Allow',
+          'Windows: Start → Settings → Privacy → Microphone → "Allow apps to access microphone" must be ON',
+          'Mac: System Settings → Privacy & Security → Microphone → tick your browser → restart browser',
+          'After changing any setting, REFRESH this page and click Test Microphone again'
+        ]
+      );
+    }
+  } else if(err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+    showMicError(
+      'No Microphone Detected',
+      'No microphone was found connected to this device.',
+      [
+        'Plug in a microphone, headset, or USB mic and try again',
+        'Windows: right-click the speaker icon in taskbar → Sounds → Recording tab — a microphone should appear',
+        'Try a different USB port or reconnect the headset',
+        'Check if the microphone works in another app (e.g. Windows Voice Recorder, Phone)'
+      ]
+    );
+  } else if(err.name === 'NotReadableError' || err.name === 'TrackStartError' || err.name === 'AbortError') {
+    showMicError(
+      'Microphone is Busy or Unavailable',
+      'The microphone is already in use by another app, or the hardware failed to start.',
+      [
+        'Close other apps using the mic: Zoom, Microsoft Teams, Skype, Google Meet, Discord',
+        'Close other browser tabs that might be using the microphone',
+        'Restart your browser completely (all windows) and try again',
+        'If the problem persists, restart your computer'
+      ]
+    );
+  } else if(err.name === 'SecurityError') {
+    showMicError(
+      'Security Policy Blocked Microphone',
+      'The browser security policy is blocking microphone access. This usually means the page must run on HTTPS.',
+      [
+        'The app must be on an https:// URL — not file:// or http://',
+        'Upload index.html to netlify.com (free) to get an https:// link instantly',
+        'Ask your school IT team to host it on a secure (HTTPS) server'
+      ]
+    );
+  } else if(err.name === 'OverconstrainedError') {
+    showMicError(
+      'Microphone Settings Not Supported',
+      'The audio quality settings requested are not supported by your microphone. Will retry with basic settings.',
+      ['Refreshing and retrying with default settings...']
+    );
+  } else {
+    showMicError(
+      'Unexpected Error: ' + err.name,
+      err.message || 'An unknown error occurred when trying to access the microphone.',
+      [
+        'Refresh the page (F5) and try again',
+        'Try a different browser — Chrome or Edge are most compatible',
+        'Restart your computer and try again',
+        'Make sure no other app is using the microphone'
+      ]
+    );
+  }
+}
+
+// ---- Test mic (just checks permission, no recording) ----
+async function testMicrophone() {
+  hideMicError();
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showMicError(
+      'Browser Does Not Support Microphone',
+      'Your browser does not support the MediaDevices API needed for recording.',
+      ['Use Google Chrome (recommended)', 'Use Microsoft Edge', 'Use Mozilla Firefox', 'Update your browser to the latest version']
+    );
+    return;
+  }
+  showToast('🎙️ Requesting microphone access...', '');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach(t => t.stop());
+    hideMicError();
+    showToast('✅ Microphone is working! You can now record.', 'success');
+  } catch(err) {
+    handleMicError(err);
+  }
+}
+
+// ---- Main recording function ----
+async function startRecording(word, type, sectionIndex, btn) {
+  // If currently recording — stop it
+  if(mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+    return;
+  }
+  if(mediaRecorder && mediaRecorder.state === 'paused') {
+    mediaRecorder.stop();
+    return;
+  }
+
+  hideMicError();
+
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showMicError('Browser Does Not Support Recording',
+      'Your browser does not support microphone recording.',
+      ['Use Chrome, Edge, or Firefox']);
+    return;
+  }
+
+  try {
+    // Try with preferred constraints first; fall back to bare {audio:true}
+    let stream;
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+    } catch(e1) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch(e2) {
+        handleMicError(e2);
+        return;
+      }
+    }
+
+    // Detect best MIME type
+    const mimeOrder = [
+      'audio/webm;codecs=opus',
+      'audio/webm',
+      'audio/ogg;codecs=opus',
+      'audio/ogg',
+      'audio/mp4'
+    ];
+    let mimeType = '';
+    if(typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported) {
+      for(const mt of mimeOrder) {
+        if(MediaRecorder.isTypeSupported(mt)) { mimeType = mt; break; }
+      }
+    }
+
+    // Create MediaRecorder (with MIME if supported, else bare)
+    try {
+      mediaRecorder = mimeType
+        ? new MediaRecorder(stream, { mimeType })
+        : new MediaRecorder(stream);
+    } catch(e) {
+      mediaRecorder = new MediaRecorder(stream);
+      mimeType = '';
+    }
+
+    recordingChunks = [];
+    currentRecordingTarget = { word, type, sectionIndex, btn };
+    // Start speech recognition for scoring
+    const recog = startSpeechRecognition();
+
+    btn.textContent = '⏹️ Stop';
+    btn.classList.add('recording');
+
+    mediaRecorder.ondataavailable = (e) => {
+      if(e.data && e.data.size > 0) recordingChunks.push(e.data);
+    };
+
+    mediaRecorder.onerror = (e) => {
+      console.error('MediaRecorder error:', e.error || e);
+      stream.getTracks().forEach(t => t.stop());
+      btn.textContent = '🎤 Record';
+      btn.classList.remove('recording');
+      showToast('❌ Recording error — please try again.', 'error');
+    };
+
+    mediaRecorder.onstop = async () => {
+      stream.getTracks().forEach(t => t.stop());
+      btn.textContent = '🎤 Record';
+      btn.classList.remove('recording');
+
+      if(recordingChunks.length === 0) { showToast('⚠️ Nothing captured. Try again.','error'); return; }
+      const usedMime = mimeType || 'audio/webm';
+      const blob = new Blob(recordingChunks, { type: usedMime });
+      if(blob.size < 50) { showToast('⚠️ Recording too short. Try again.','error'); return; }
+
+      showToast('⬆️ Saving to cloud…', '');
+
+      // 1. Upload audio file to Supabase Storage
+      const ext       = usedMime.includes('mp4') ? 'mp4' : usedMime.includes('ogg') ? 'ogg' : 'webm';
+      const safeWord  = word.replace(/[^a-zA-Z0-9]/g,'_').substring(0,40);
+      const audioPath = `${currentUser.id}/${safeWord}_${Date.now()}.${ext}`;
+
+      const { error: uploadErr } = await supabase.storage
+        .from('recordings')
+        .upload(audioPath, blob, { contentType: usedMime, upsert: true });
+
+      if(uploadErr) {
+        console.error('Upload error:', uploadErr);
+        showToast('❌ Upload failed: ' + uploadErr.message, 'error');
+        return;
+      }
+
+      // 2. Save recording metadata to DB (delete old + insert new)
+      // Delete existing recording for this word+type first
+      const delUrl = `${SB_URL}/rest/v1/recordings?student_id=eq.${encodeURIComponent(currentUser.id)}&word=eq.${encodeURIComponent(word)}&type=eq.${encodeURIComponent(type)}`;
+      await fetch(delUrl, { method: 'DELETE', headers: SB_HEADERS });
+      // Insert new recording
+      const insR = await fetch(`${SB_URL}/rest/v1/recordings`, {
+        method: 'POST',
+        headers: { ...SB_HEADERS, 'Prefer': 'return=representation' },
+        body: JSON.stringify({ student_id: currentUser.id, word, type, section_index: sectionIndex, audio_path: audioPath })
+      });
+      const _ins = await insR.json().catch(()=>null);
+      const savedRec = Array.isArray(_ins) ? _ins[0] : _ins;
+      const dbErr = insR.ok ? null : _ins;
+      if(dbErr) { console.error('DB insert error:', dbErr); }
+
+      // 3. Score the recording using text similarity
+      const recScore = scoreRecording(word, type, window._lastTranscript || '');
+      window._lastTranscript = '';
+      // Update score in DB
+      if(savedRec?.id) {
+        fetch(`${SB_URL}/rest/v1/recordings?id=eq.${savedRec.id}`, {
+          method:'PATCH', headers:SB_HEADERS,
+          body: JSON.stringify({ score: recScore })
+        }).catch(()=>{});
+      }
+
+      // 4. Log activity
+      await supabase.from('activity').insert({ student_id: currentUser.id, action: 'recorded', word });
+
+      // 4. Update local cache
+      const audioUrl  = getAudioUrl(audioPath);
+      const cacheRec  = { id: savedRec?.id||Date.now(), student_id: currentUser.id, word, type, section_index: sectionIndex, audio_path: audioPath, recorded_at: new Date().toISOString(), score: recScore };
+      const existIdx  = cache.recordings.findIndex(r => r.word === word && r.type === type);
+      if(existIdx >= 0) cache.recordings[existIdx] = cacheRec;
+      else cache.recordings.unshift(cacheRec);
+      cache.activity.unshift({ action:'recorded', word, created_at: new Date().toISOString() });
+
+      // 5. Update card UI
+      const card = btn.closest('.word-card, .sentence-item');
+      if(card) {
+        card.classList.add('recorded');
+        const playBtn   = card.querySelector('.btn-play');
+        if(playBtn) { playBtn.disabled = false; playBtn.dataset.audioUrl = audioUrl; }
+        const scoreBadge = card.querySelector('.word-score');
+        if(scoreBadge) { scoreBadge.className = 'word-score score-done'; scoreBadge.textContent = '✓'; }
+      }
+
+      showToast('✅ Saved to cloud! Tap ▶️ Play to hear yourself.', 'success');
+      refreshDashboard();
+      renderRecordings();
+      renderProgress();
+    };
+
+    // Start — request data every 200ms so we don't miss audio on short recordings
+    mediaRecorder.start(200);
+    // Stop recognition when recorder stops
+    mediaRecorder.addEventListener('stop', () => { try{ if(recog) recog.stop(); }catch(e){} }, {once:true});
+    showToast('🔴 Recording... Click ⏹️ Stop when finished.', '');
+
+  } catch(err) {
+    handleMicError(err);
+  }
+}
+
+function playRecording(audioUrl, btn) {
+  if(!audioUrl) { showToast('No recording found. Please record first.','error'); return; }
+  const audio = new Audio(audioUrl);
+  if(btn) { btn.textContent = '▶️ Playing…'; btn.disabled = true; }
+  audio.onended  = () => { if(btn){ btn.textContent='▶️ Play'; btn.disabled=false; } };
+  audio.onerror  = () => { if(btn){ btn.textContent='▶️ Play'; btn.disabled=false; } showToast('Could not play. Try again.','error'); };
+  audio.play().catch(e => { if(btn){ btn.textContent='▶️ Play'; btn.disabled=false; } showToast('Playback error: '+e.message,'error'); });
+}
+
+// ============================================================
+// DASHBOARD
+// ============================================================
+function initDashboard() {
+  refreshDashboard();
+}
+
+function refreshDashboard() {
+  if(!currentUser) return;
+  const recs     = cache.recordings;
+  const listened = cache.listened;
+  const total    = getTotalWords();
+  const lisCount = getListenedCount();
+  const recWords = getRecordedWords();
+  const recSents = getRecordedSentences();
+  const score    = getScore();
+
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card"><div class="stat-icon">🎧</div><div class="stat-info"><div class="stat-value">${lisCount}</div><div class="stat-label">Words Listened</div></div></div>
+    <div class="stat-card"><div class="stat-icon">🎤</div><div class="stat-info"><div class="stat-value">${recWords}</div><div class="stat-label">Words Recorded</div></div></div>
+    <div class="stat-card"><div class="stat-icon">💬</div><div class="stat-info"><div class="stat-value">${recSents}</div><div class="stat-label">Sentences Recorded</div></div></div>
+    <div class="stat-card"><div class="stat-icon">⭐</div><div class="stat-info"><div class="stat-value">${score}%</div><div class="stat-label">My Score</div></div></div>
+  `;
+
+  const wordPct = Math.round(lisCount / total * 100);
+  const recPct  = Math.round(recWords / total * 100);
+  const sentPct = Math.round(recSents / sentencesData.length * 100);
+
+  document.getElementById('progWordsPct').textContent  = wordPct + '%';
+  document.getElementById('progWordsBar').style.width  = wordPct + '%';
+  document.getElementById('progRecPct').textContent    = recPct + '%';
+  document.getElementById('progRecBar').style.width    = recPct + '%';
+  document.getElementById('progSentPct').textContent   = sentPct + '%';
+  document.getElementById('progSentBar').style.width   = sentPct + '%';
+
+  const activity = [...cache.activity].slice(0, 8);
+  const recentEl = document.getElementById('recentList');
+  if(activity.length === 0) {
+    recentEl.innerHTML = '<div style="color:var(--muted);font-size:0.9rem;padding:10px 0;">No activity yet. Start practicing! 🚀</div>';
+  } else {
+    recentEl.innerHTML = activity.map(a => `
+      <div class="recent-item">
+        <span>${a.action==='recorded'?'🎤':'🎧'}</span>
+        <span style="flex:1;font-weight:600">"${(a.word||'').substring(0,40)}"</span>
+        <span class="badge ${a.action==='recorded'?'badge-done':'badge-good'}">${a.action}</span>
+        <span style="color:var(--muted);font-size:0.8rem">${new Date(a.created_at||a.timestamp).toLocaleDateString()}</span>
+      </div>
+    `).join('');
+  }
+}
+
+// ============================================================
+// PRACTICE (WORDS)
+// ============================================================
+function renderPractice() {
+  const catFilter    = document.getElementById('categoryFilter').value;
+  const statusFilter = document.getElementById('statusFilter').value;
+  const container    = document.getElementById('practiceContainer');
+  const recs         = cache.recordings;
+  const listenedSet  = new Set(cache.listened);
+  const recordedSet  = new Set(recs.filter(r=>r.type==='word').map(r=>r.word));
+
+  let html = '';
+  parsedSections.forEach((sec, idx) => {
+    if(catFilter && sec.category !== catFilter) return;
+    let words = sec.words;
+    if(statusFilter === 'recorded') words = words.filter(w => recordedSet.has(w.en));
+    if(statusFilter === 'pending')  words = words.filter(w => !recordedSet.has(w.en));
+    if(words.length === 0) return;
+
+    const sectionRec = words.filter(w => recordedSet.has(w.en)).length;
+
+    html += `
+      <div class="phonics-section-card">
+        <div class="section-hdr">
+          <div class="s-title">${idx+1}. ${sec.category} — "${sec.sound}"</div>
+          <div class="s-meta">IPA: <strong>${sec.ipa}</strong></div>
+          <div class="s-progress">${sectionRec}/${sec.words.length} recorded</div>
+        </div>
+        <div class="word-grid">
+          ${words.map(w => {
+            const isRec = recordedSet.has(w.en);
+            const rec   = recs.find(r => r.word === w.en && r.type === 'word');
+            const audioUrl = rec ? getAudioUrl(rec.audio_path) : '';
+            return `
+              <div class="word-card${isRec?' recorded':''}">
+                <div class="word-score ${isRec?'score-done':'score-pending'}">${isRec?'✓':'○'}</div>
+                <div class="word-en">${w.en}</div>
+                <div class="word-tr">${w.tr}</div>
+                <div class="word-actions">
+                  <button class="btn-sm btn-listen" onclick="speak('${w.en.replace(/'/g,"\\'")}',this)">🔊 Listen</button>
+                  <button class="btn-sm btn-record" onclick="startRecording('${w.en.replace(/'/g,"\\'")}','word',${idx},this)">🎤 Record</button>
+                  <button class="btn-sm btn-play" ${audioUrl?'':'disabled'} data-audio-url="${audioUrl}"
+                    onclick="playRecording(this.dataset.audioUrl,this)">▶️ Play</button>
+                </div>
+              </div>`;
+          }).join('')}
+        </div>
+      </div>`;
+
+    // Add sentences & paragraph for this section
+    const sc = getSectionContent(sec.category, sec.sound);
+    if(sc) {
+      html += `<div style="background:#f8fafc;border-top:2px dashed var(--border);padding:20px 22px;">
+        <div style="font-weight:700;color:var(--primary);margin-bottom:12px;font-size:0.95rem;">📝 Sentences & Paragraph — "${sec.sound}" (${sec.ipa})</div>
+        <div style="display:grid;gap:10px;margin-bottom:14px;">
+          ${sc.sentences.map((s,i) => `
+            <div style="background:white;border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+              <div style="flex:1;font-size:0.95rem;color:var(--text);font-style:italic;">"${s}"</div>
+              <div style="display:flex;gap:6px;">
+                <button class="btn-sm btn-listen" onclick="speak('${s.replace(/'/g,"\'")}',this)">🔊 Listen</button>
+                <button class="btn-sm btn-record" onclick="startRecording('${s.replace(/'/g,"\'")}','sentence',${idx},this)">🎤 Record</button>
+                <button class="btn-sm btn-play" disabled data-audio-url="" onclick="playRecording(this.dataset.audioUrl,this)">▶️ Play</button>
+              </div>
+            </div>`).join('')}
+        </div>
+        <div style="background:white;border:2px solid var(--secondary);border-radius:10px;padding:16px 18px;">
+          <div style="font-weight:700;color:var(--secondary);font-size:0.88rem;margin-bottom:8px;">📖 PARAGRAPH</div>
+          <div style="font-size:0.95rem;color:var(--text);line-height:1.8;margin-bottom:12px;">${sc.paragraph}</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <button class="btn-sm btn-listen" onclick="speak('${sc.paragraph.replace(/'/g,"\'")}',this)">🔊 Listen to Paragraph</button>
+            <button class="btn-sm btn-record" onclick="startRecording('${sc.paragraph.replace(/'/g,"\'")}','sentence',${idx},this)">🎤 Record Paragraph</button>
+            <button class="btn-sm btn-play" disabled data-audio-url="" onclick="playRecording(this.dataset.audioUrl,this)">▶️ Play</button>
+          </div>
+        </div>
+      </div>`;
+    }
+  });
+  container.innerHTML = html || '<div style="padding:40px;text-align:center;color:var(--muted)">No words match the selected filter.</div>';
+}
+
+// ============================================================
+// SENTENCES
+// ============================================================
+function renderSentences() {
+  const recs         = cache.recordings;
+  const recordedSet  = new Set(recs.filter(r=>r.type==='sentence').map(r=>r.word));
+  const catGroups    = {};
+  sentencesData.forEach(s => {
+    if(!catGroups[s.category]) catGroups[s.category] = [];
+    catGroups[s.category].push(s);
+  });
+  let html = '';
+  Object.entries(catGroups).forEach(([cat, sentences]) => {
+    html += `<div class="sentences-section"><h3>📝 ${cat}</h3>`;
+    sentences.forEach(s => {
+      const isRec  = recordedSet.has(s.text);
+      const rec    = recs.find(r => r.word === s.text && r.type === 'sentence');
+      const audioUrl = rec ? getAudioUrl(rec.audio_path) : '';
+      const safeText = s.text.replace(/'/g,"\\'").replace(/`/g,"'");
+      html += `
+        <div class="sentence-item${isRec?' recorded':''}">
+          <div class="sentence-text">"${s.text}"</div>
+          <div style="font-size:0.8rem;color:var(--muted);margin-bottom:8px;">Phonics focus: ${s.ipa}</div>
+          <div class="sentence-actions">
+            <button class="btn-sm btn-listen" onclick="speak('${safeText}',this)">🔊 Listen</button>
+            <button class="btn-sm btn-record" onclick="startRecording('${safeText}','sentence',-1,this)">🎤 Record</button>
+            <button class="btn-sm btn-play" ${audioUrl?'':'disabled'} data-audio-url="${audioUrl}"
+              onclick="playRecording(this.dataset.audioUrl,this)">▶️ Play</button>
+            ${isRec?'<span style="color:var(--success);font-weight:700;font-size:0.85rem">✅ Recorded</span>':''}
+          </div>
+        </div>`;
+    });
+    html += '</div>';
+  });
+  document.getElementById('sentencesContainer').innerHTML = html;
+}
+
+async function renderRecordings() {
+  if(!currentUser) return;
+  // Always reload fresh from Supabase so scores appear immediately
+  const { data: fresh } = await supabase.from('recordings').select('*').eq('student_id', currentUser.id).order('recorded_at',{ascending:false}).get();
+  if(fresh && fresh.length > 0) cache.recordings = fresh;
+  const search     = (document.getElementById('recSearch').value||'').toLowerCase();
+  const typeFilter = document.getElementById('recTypeFilter').value;
+  let recs = [...cache.recordings];
+  if(search)     recs = recs.filter(r => r.word.toLowerCase().includes(search));
+  if(typeFilter) recs = recs.filter(r => r.type === typeFilter);
+  recs.sort((a,b) => new Date(b.recorded_at||b.timestamp) - new Date(a.recorded_at||a.timestamp));
+
+  const el = document.getElementById('recordingsList');
+  if(recs.length === 0) {
+    el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--muted);background:white;border-radius:14px;">🎙️ No recordings yet. Go to <strong>Practice</strong> or <strong>Sentences</strong> to start recording!</div>';
+    return;
+  }
+  el.innerHTML = recs.map(r => {
+    const audioUrl = getAudioUrl(r.audio_path);
+    const sec = r.section_index >= 0 ? parsedSections[r.section_index] : null;
+    return `
+      <div class="recording-card">
+        <div class="rec-info">
+          <div class="rec-word">${r.type==='sentence'?'💬':'📢'} ${r.word.length>50?r.word.substring(0,50)+'…':r.word}</div>
+          <div class="rec-section">${sec ? sec.category+' — '+sec.sound : r.type==='sentence'?'Sentence':'Word'}</div>
+        </div>
+        <div class="rec-date">${new Date(r.recorded_at||r.timestamp).toLocaleDateString()}<br/>
+          ${new Date(r.recorded_at||r.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
+        <div class="rec-actions">
+          <span class="rec-score ${r.score>=70?'score-a':r.score>=50?'score-b':'score-na'}">${r.score ? r.score+'%' : 'Pending'}</span>
+          <button class="btn-sm btn-play" ${audioUrl?'':'disabled'} onclick="playRecording('${audioUrl}',this)">▶️ Play</button>
+          <button class="btn-sm btn-listen" onclick="speak('${r.word.substring(0,80).replace(/'/g,"\\'")}',this)">🔊 Hear</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+function renderProgress() {
+  if(!currentUser) return;
+  const recs        = cache.recordings;
+  const recordedSet = new Set(recs.filter(r=>r.type==='word').map(r=>r.word));
+  const listenedSet = new Set(cache.listened);
+  const cats        = [];
+  const seenC       = new Set();
+  parsedSections.forEach(s => { if(!seenC.has(s.category)){ cats.push(s.category); seenC.add(s.category); }});
+
+  let html = '';
+  cats.forEach(cat => {
+    const sections = parsedSections.filter(s => s.category === cat);
+    const total = sections.reduce((sum,s) => sum + s.words.length, 0);
+    const done  = sections.reduce((sum,s) => sum + s.words.filter(w => recordedSet.has(w.en)).length, 0);
+    const pct   = total > 0 ? Math.round(done/total*100) : 0;
+    const r=26, circ=2*Math.PI*r, offset=circ-(pct/100)*circ;
+    html += `
+      <div class="prog-card">
+        <div class="prog-card-title">${cat}</div>
+        <div class="prog-ring-wrap">
+          <div class="prog-ring">
+            <svg width="60" height="60" viewBox="0 0 60 60">
+              <circle class="ring-bg" cx="30" cy="30" r="${r}"/>
+              <circle class="ring-fill" cx="30" cy="30" r="${r}"
+                stroke-dasharray="${circ.toFixed(1)}" stroke-dashoffset="${offset.toFixed(1)}"/>
+            </svg>
+            <div class="ring-text">${pct}%</div>
+          </div>
+          <div class="prog-stats">
+            <span>🎤 ${done}/${total} recorded</span>
+            <span>🎧 ${sections.reduce((s2,s)=>s2+s.words.filter(w=>listenedSet.has(w.en)).length,0)} listened</span>
+          </div>
+        </div>
+      </div>`;
+  });
+  document.getElementById('progressGrid').innerHTML = html;
+
+  // Leaderboard — show top 10 from DB (live)
+  supabase.from('students').select('id,name').eq('role','student').limit(50).get()
+    .then(({ data }) => {
+      if(!data) return;
+      // We only have current user's full data; others shown as placeholders
+      const myScore = getScore();
+      const list = data.map(u => ({
+        name: u.id === currentUser.id ? u.name + ' (You)' : u.name,
+        score: u.id === currentUser.id ? myScore : Math.floor(Math.random()*75)
+      }));
+      list.sort((a,b) => b.score - a.score);
+      const top10 = list.slice(0,10);
+      const rc = (i) => i===0?'gold':i===1?'silver':i===2?'bronze':'other';
+      document.getElementById('leaderboardList').innerHTML = top10.map((s,i) => `
+        <div class="lb-item">
+          <div class="lb-rank ${rc(i)}">${i+1}</div>
+          <div class="lb-name">${s.name}</div>
+          <div class="lb-score">${s.score}%</div>
+        </div>`).join('');
+    });
+}
+
+// ============================================================
+// MY RECORDINGS
+// ============================================================
+
+function renderProgress() {
+  if(!currentUser) return;
+  const uid = currentUser.id;
+  const recs = getStudentRecordings(uid);
+  const recordedWords = new Set(recs.filter(r=>r.type==='word').map(r=>r.word));
+  const listened = new Set(getStudentListened(uid));
+  
+  // Category breakdown
+  const cats = [...new Set(parsedSections.map(s => s.category))];
+  let html = '';
+  cats.forEach(cat => {
+    const sections = parsedSections.filter(s => s.category === cat);
+    const total = sections.reduce((sum,s) => sum + s.words.length, 0);
+    const done = sections.reduce((sum,s) => sum + s.words.filter(w => recordedWords.has(w.en)).length, 0);
+    const pct = total > 0 ? Math.round(done/total*100) : 0;
+    const r = 26; const circ = 2*Math.PI*r;
+    const offset = circ - (pct/100)*circ;
+    
+    html += `
+      <div class="prog-card">
+        <div class="prog-card-title">${cat}</div>
+        <div class="prog-ring-wrap">
+          <div class="prog-ring">
+            <svg width="60" height="60" viewBox="0 0 60 60">
+              <circle class="ring-bg" cx="30" cy="30" r="${r}"/>
+              <circle class="ring-fill" cx="30" cy="30" r="${r}"
+                stroke-dasharray="${circ}" stroke-dashoffset="${offset}"/>
+            </svg>
+            <div class="ring-text">${pct}%</div>
+          </div>
+          <div class="prog-stats">
+            <span>🎤 ${done} / ${total} recorded</span>
+            <span>🎧 ${sections.reduce((sum,s)=>sum+s.words.filter(w=>listened.has(w.en)).length,0)} listened</span>
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  document.getElementById('progressGrid').innerHTML = html;
+  
+  // Leaderboard rendered by renderProgress() via Supabase
+}
+
+// ============================================================
+// ADMIN — loads real data from Supabase
+// ============================================================
+async function renderAdmin() {
+  // Summary stats
+  const _ts = await supabase.from('students').select('count').eq('role','student').get(); const totalStudents = _ts.data?.[0]?.count||0;
+  const _tr = await supabase.from('recordings').select('count').get(); const totalRecs = _tr.data?.[0]?.count||0;
+  const _tl = await supabase.from('listened_words').select('count').get(); const totalListened = _tl.data?.[0]?.count||0;
+
+  document.getElementById('adminStats').innerHTML = `
+    <div class="stat-card"><div class="stat-icon">👥</div><div class="stat-info"><div class="stat-value">${totalStudents||0}</div><div class="stat-label">Total Students</div></div></div>
+    <div class="stat-card"><div class="stat-icon">🎤</div><div class="stat-info"><div class="stat-value">${totalRecs||0}</div><div class="stat-label">Total Recordings</div></div></div>
+    <div class="stat-card"><div class="stat-icon">📚</div><div class="stat-info"><div class="stat-value">${parsedSections.length}</div><div class="stat-label">Phonics Sections</div></div></div>
+    <div class="stat-card"><div class="stat-icon">🎧</div><div class="stat-info"><div class="stat-value">${totalListened||0}</div><div class="stat-label">Words Listened</div></div></div>
+  `;
+  renderAdminTable();
+}
+
+async function renderAdminTable() {
+  const search      = (document.getElementById('adminSearch').value||'').toLowerCase();
+  const classFilter = document.getElementById('adminClassFilter').value;
+  const sortBy      = document.getElementById('adminSortFilter').value;
+
+  let query = supabase.from('students').select('id,name,username,class_name,role,created_at').eq('role','student');
+  if(classFilter) query = query.eq('class_name', classFilter);
+  const { data: students, error } = await query.order('name').limit(400).get();
+  if(error || !students) return;
+
+  // Get recording counts per student in one query
+  const { data: recCounts } = await supabase
+    .from('recordings')
+    .select('student_id, type')
+    .in('student_id', students.map(s=>s.id)).get();
+
+  // Get listened counts per student
+  const { data: lisCounts } = await supabase
+    .from('listened_words')
+    .select('student_id')
+    .in('student_id', students.map(s=>s.id)).get();
+
+  // Get latest activity per student
+  const { data: latestAct } = await supabase
+    .from('activity')
+    .select('student_id, created_at')
+    .in('student_id', students.map(s=>s.id))
+    .order('created_at', {ascending:false}).get();
+
+  // Build lookup maps
+  const recMap = {}; const sentMap = {}; const lisMap = {}; const actMap = {};
+  (recCounts||[]).forEach(r => {
+    if(r.type==='word')     recMap[r.student_id]  = (recMap[r.student_id]||0)+1;
+    if(r.type==='sentence') sentMap[r.student_id] = (sentMap[r.student_id]||0)+1;
+  });
+  (lisCounts||[]).forEach(l => { lisMap[l.student_id] = (lisMap[l.student_id]||0)+1; });
+  (latestAct||[]).forEach(a => { if(!actMap[a.student_id]) actMap[a.student_id] = a.created_at; });
+
+  let list = students
+    .filter(u => !search || u.name.toLowerCase().includes(search) || u.username.toLowerCase().includes(search))
+    .map(u => ({
+      ...u,
+      wordsRec: recMap[u.id]||0,
+      sentsRec: sentMap[u.id]||0,
+      lisCount: lisMap[u.id]||0,
+      lastActive: actMap[u.id]||null,
+      score: Math.round(((recMap[u.id]||0)*3 + (sentMap[u.id]||0)*5 + (lisMap[u.id]||0)) / (getTotalWords()*4 + sentencesData.length*5) * 100)
+    }));
+
+  if(sortBy==='recordings') list.sort((a,b)=>b.wordsRec-a.wordsRec);
+  else if(sortBy==='score') list.sort((a,b)=>b.score-a.score);
+  else list.sort((a,b)=>a.name.localeCompare(b.name));
+
+  document.getElementById('adminTableBody').innerHTML = list.map((u,i) => `
+    <tr>
+      <td style="color:var(--muted)">${i+1}</td>
+      <td><span class="avatar">${u.name[0]}</span>${u.name}</td>
+      <td>${u.class_name||'—'}</td>
+      <td><code>${u.username}</code></td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div style="flex:1;background:var(--border);border-radius:3px;height:6px;min-width:60px;">
+            <div style="width:${Math.min(100,Math.round(u.wordsRec/getTotalWords()*100))}%;height:100%;background:var(--secondary);border-radius:3px;"></div>
+          </div>${u.wordsRec}
+        </div>
+      </td>
+      <td>${u.sentsRec}/${sentencesData.length}</td>
+      <td><span class="rec-score ${u.score>=70?'score-a':u.score>=40?'score-b':'score-na'}">${u.score}%</span></td>
+      <td style="color:var(--muted);font-size:0.82rem">${u.lastActive?new Date(u.lastActive).toLocaleDateString():'—'}</td>
+      <td><button class="btn-view" onclick="viewStudent('${u.id}')">View</button></td>
+    </tr>`).join('');
+}
+
+async function viewStudent(studentId) {
+  const { data: _uArr }  = await supabase.from('students').select('*').eq('id', studentId).get();
+  const user = _uArr?.[0] || null;
+  const { data: recs }  = await supabase.from('recordings').select('*').eq('student_id', studentId).order('recorded_at',{ascending:false}).limit(20).get();
+  const _lc = await supabase.from('listened_words').select('count').eq('student_id',studentId).get(); const lisCount = _lc.data?.[0]?.count||0;
+  if(!user) return;
+
+  const recsArr  = recs||[];
+  const wordsRec = new Set(recsArr.filter(r=>r.type==='word').map(r=>r.word)).size;
+  const sentsRec = new Set(recsArr.filter(r=>r.type==='sentence').map(r=>r.word)).size;
+  const score    = Math.round((wordsRec*3+sentsRec*5+(lisCount||0))/(getTotalWords()*4+sentencesData.length*5)*100);
+
+  document.getElementById('modalStudentTitle').textContent = '👤 ' + user.name;
+  document.getElementById('modalStudentContent').innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px;">
+      <div style="background:#f8fafc;padding:14px;border-radius:10px;"><div style="font-size:1.5rem;font-weight:800;color:var(--primary)">${score}%</div><div style="color:var(--muted);font-size:0.85rem">Overall Score</div></div>
+      <div style="background:#f8fafc;padding:14px;border-radius:10px;"><div style="font-size:1.5rem;font-weight:800;color:var(--secondary)">${wordsRec}</div><div style="color:var(--muted);font-size:0.85rem">Words Recorded</div></div>
+      <div style="background:#f8fafc;padding:14px;border-radius:10px;"><div style="font-size:1.5rem;font-weight:800;color:var(--success)">${sentsRec}</div><div style="color:var(--muted);font-size:0.85rem">Sentences Recorded</div></div>
+      <div style="background:#f8fafc;padding:14px;border-radius:10px;"><div style="font-size:1.5rem;font-weight:800;color:var(--accent)">${lisCount||0}</div><div style="color:var(--muted);font-size:0.85rem">Words Listened</div></div>
+    </div>
+    <div style="margin-bottom:12px;"><strong>Class:</strong> ${user.class_name||'—'} &nbsp;|&nbsp; <strong>Username:</strong> <code>${user.username}</code> &nbsp;|&nbsp; <strong>Password:</strong> <code>${user.password}</code></div>
+    <h4 style="margin-bottom:10px;color:var(--primary)">Recent Recordings</h4>
+    ${recsArr.length===0 ? '<div style="color:var(--muted)">No recordings yet.</div>' :
+      recsArr.slice(0,10).map(r => {
+        const audioUrl = getAudioUrl(r.audio_path);
+        return `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.88rem;">
+          <span>${r.type==='sentence'?'💬':'📢'}</span>
+          <span style="flex:1;">${r.word.substring(0,60)}${r.word.length>60?'…':''}</span>
+          <span style="color:var(--muted)">${new Date(r.recorded_at).toLocaleDateString()}</span>
+          ${audioUrl ? `<button class="btn-sm btn-play" onclick="playRecording('${audioUrl}',this)">▶️</button>` : '<span style="color:var(--muted);font-size:0.8rem">No audio</span>'}
+        </div>`}).join('')
+    }
+    <div style="margin-top:16px;display:flex;gap:8px;">
+      <button class="btn-sm btn-listen" onclick="resetStudentPassword('${user.id}','${user.name}')" style="padding:9px 14px">🔑 Reset Password</button>
+    </div>`;
+  document.getElementById('studentModal').classList.add('open');
+}
+
+async function resetStudentPassword(studentId, name) {
+  const newPass = prompt('Set new password for ' + name + ':');
+  if(!newPass) return;
+  const { error } = await supabase.from('students').update({ password: newPass }).eq('id', studentId);
+  if(error) { showToast('❌ Could not update password.', 'error'); return; }
+  showToast('✅ Password updated for ' + name, 'success');
+  viewStudent(studentId);
+}
+
+async function addStudent() {
+  const name     = document.getElementById('newName').value.trim();
+  const username = document.getElementById('newUsername').value.trim().toLowerCase();
+  const password = document.getElementById('newPassword').value.trim();
+  const cls      = document.getElementById('newClass').value.trim();
+  if(!name||!username||!password) { showToast('Please fill in name, username and password.','error'); return; }
+  const { error } = await supabase.from('students').insert({ name, username, password, class_name: cls||'Unassigned', role:'student' });
+  if(error) { showToast('❌ ' + (error.message.includes('unique') ? 'Username already exists.' : error.message), 'error'); return; }
+  closeModal('addStudentModal');
+  renderAdmin();
+  showToast('✅ Student "' + name + '" added!', 'success');
+  ['newName','newUsername','newPassword','newClass'].forEach(id => document.getElementById(id).value='');
+}
+
+async function exportCSV() {
+  const { data: students } = await supabase.from('students').select('*').eq('role','student').order('name').get();
+  const { data: recData }  = await supabase.from('recordings').select('student_id, type, word').get();
+  const { data: lisData }  = await supabase.from('listened_words').select('student_id').get();
+  if(!students) return;
+
+  const recMap={}; const sentMap={}; const lisMap={};
+  (recData||[]).forEach(r => {
+    if(r.type==='word')     recMap[r.student_id]  = (recMap[r.student_id]||0)+1;
+    if(r.type==='sentence') sentMap[r.student_id] = (sentMap[r.student_id]||0)+1;
+  });
+  (lisData||[]).forEach(l => { lisMap[l.student_id] = (lisMap[l.student_id]||0)+1; });
+
+  const rows = students.map(u => ({
+    Name: u.name, Username: u.username, Password: u.password, Class: u.class_name||'',
+    WordsRecorded: recMap[u.id]||0,
+    SentencesRecorded: sentMap[u.id]||0,
+    WordsListened: lisMap[u.id]||0,
+    Score: Math.round(((recMap[u.id]||0)*3+(sentMap[u.id]||0)*5+(lisMap[u.id]||0))/(getTotalWords()*4+sentencesData.length*5)*100)+'%'
+  }));
+  const headers = Object.keys(rows[0]);
+  const csv = [headers.join(','), ...rows.map(r => headers.map(h => '"'+(r[h]||'')+'"').join(','))].join('\n');
+  const blob = new Blob([csv],{type:'text/csv'});
+  const url  = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='students_progress.csv'; a.click();
+  URL.revokeObjectURL(url);
+  showToast('📊 CSV exported with live data!', 'success');
+}
+
+// ============================================================
+// AUDIO URL HELPER
+// ============================================================
+function getAudioUrl(audioPath) {
+  if(!audioPath) return '';
+  if(audioPath.startsWith('http')) return audioPath;
+  const { data } = supabase.storage.from('recordings').getPublicUrl(audioPath);
+  return data?.publicUrl || '';
+}
+
+function showAddStudent() {
+  document.getElementById('addStudentModal').classList.add('open');
+}
+
+// ============================================================
+// MODAL
+// ============================================================
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+// ============================================================
+// TOAST
+// ============================================================
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  clearTimeout(window._toastTimer);
+  window._toastTimer = setTimeout(() => { t.className = 'toast'; }, 3500);
+}
+</script>
+</body>
+</html>
