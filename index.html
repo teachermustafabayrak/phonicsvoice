@@ -2161,7 +2161,7 @@ async function renderAdminTable() {
       <td>${u.sentsRec}/${sentencesData.length}</td>
       <td><span class="rec-score ${u.score>=70?'score-a':u.score>=40?'score-b':'score-na'}">${u.score}%</span></td>
       <td style="color:var(--muted);font-size:0.82rem">${u.lastActive?new Date(u.lastActive).toLocaleDateString():'—'}</td>
-      <td><button class="btn-view" onclick="viewStudent('${u.id}')">View</button></td>
+      <td style='display:flex;gap:6px;'><button class="btn-view" onclick="viewStudent('${u.id}')">View</button><button style='padding:5px 10px;background:#fee2e2;color:#dc2626;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;' onclick="deleteStudent('${u.id}','${u.name}')">🗑️</button></td>
     </tr>`).join('');
 }
 
@@ -2475,6 +2475,17 @@ function renderExam() {
   document.getElementById('examContainer').innerHTML = html;
 }
 
+
+async function deleteStudent(id, name) {
+  if(!confirm('Delete ' + name + '? This also deletes all their recordings.')) return;
+  const r = await fetch(SB_URL+'/rest/v1/students?id=eq.'+id, {method:'DELETE', headers:SB_HEADERS});
+  if(r.ok || r.status===200 || r.status===204) {
+    showToast('🗑️ ' + name + ' deleted.', 'success');
+    renderAdmin();
+  } else {
+    showToast('❌ Could not delete. Check Supabase RLS delete policy.', 'error');
+  }
+}
 </script>
 </body>
 </html>
