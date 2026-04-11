@@ -492,6 +492,7 @@ body { background: var(--bg); color: var(--text); min-height: 100vh; }
     <button class="nav-tab" onclick="showPage('sentences', this)">💬 Sentences</button>
     <button class="nav-tab" onclick="showPage('recordings', this)">🎙️ My Recordings</button>
     <button class="nav-tab" onclick="showPage('progress', this)">📊 My Progress</button>
+    <button class="nav-tab" onclick="showPage('exam', this)">🎓 Exam Practice</button>
     <button class="nav-tab admin-only" style="display:none" onclick="showPage('admin', this)">👨‍🏫 Admin</button>
   </div>
 
@@ -589,6 +590,27 @@ body { background: var(--bg); color: var(--text); min-height: 100vh; }
       <h3>🏆 Class Leaderboard (Top 10)</h3>
       <div id="leaderboardList"></div>
     </div>
+  </div>
+
+
+  <!-- ===== EXAM PRACTICE ===== -->
+  <div class="page" id="page-exam">
+    <div style="background:linear-gradient(135deg,#1a3a5c,#2563eb);color:white;padding:22px 24px;border-radius:14px;margin-bottom:24px;">
+      <h2 style="font-size:1.3rem;font-weight:800;margin-bottom:6px;">🎓 Exam Speaking Practice</h2>
+      <p style="font-size:0.9rem;opacity:0.85;">Read both the Question AND Answer aloud. Practice real exam questions from A1 (Cambridge YLE) to C1 (IELTS/CAE).</p>
+    </div>
+    <div class="section-filter" style="margin-bottom:20px;">
+      <label style="font-weight:600;color:var(--muted);font-size:0.9rem;">Level:</label>
+      <select class="filter-select" id="examLevelFilter" onchange="renderExam()">
+        <option value="">All Levels</option>
+        <option value="A1">A1 — Cambridge YLE Starters</option>
+        <option value="A2">A2 — Cambridge YLE Movers/Flyers</option>
+        <option value="B1">B1 — Cambridge PET / Trinity</option>
+        <option value="B2">B2 — Cambridge FCE / IELTS 5-6</option>
+        <option value="C1">C1 — Cambridge CAE / IELTS 6.5-8</option>
+      </select>
+    </div>
+    <div id="examContainer"></div>
   </div>
 
   <!-- ===== ADMIN ===== -->
@@ -1368,6 +1390,7 @@ function showPage(page, btn) {
   if(page === 'practice')    renderPractice();
   if(page === 'sentences')   renderSentences();
   if(page === 'admin')       renderAdmin();
+  if(page === 'exam')        renderExam();
 }
 
 // ============================================================
@@ -2264,6 +2287,194 @@ function showToast(msg, type) {
   clearTimeout(window._toastTimer);
   window._toastTimer = setTimeout(() => { t.className = 'toast'; }, 3500);
 }
+
+// ============================================================
+// EXAM Q&A DATA (A1-C1)
+// ============================================================
+const EXAM_DATA = [
+// ── A1: Cambridge YLE Starters ─────────────────────────────
+{level:"A1",topic:"Personal Information",qa:[
+  {q:"What is your name?", a:"My name is [your name]."},
+  {q:"How old are you?", a:"I am [age] years old."},
+  {q:"Where do you live?", a:"I live in [city/town]."},
+  {q:"What colour is your bag?", a:"My bag is [colour]."},
+  {q:"Do you have a pet?", a:"Yes, I have a [animal]. / No, I don't have a pet."},
+  {q:"What is your favourite colour?", a:"My favourite colour is [colour]."},
+  {q:"How many brothers and sisters do you have?", a:"I have [number] brothers and sisters."},
+  {q:"What food do you like?", a:"I like [food]."},
+  {q:"Can you swim?", a:"Yes, I can swim. / No, I can't swim."},
+  {q:"What is this?", a:"It is a [object]."},
+]},
+{level:"A1",topic:"School & Family",qa:[
+  {q:"What is your teacher's name?", a:"My teacher's name is [name]."},
+  {q:"How many students are in your class?", a:"There are [number] students in my class."},
+  {q:"What is your favourite subject?", a:"My favourite subject is [subject]."},
+  {q:"Who is in your family?", a:"In my family there is my mum, dad and [siblings]."},
+  {q:"What does your father do?", a:"My father is a [job]."},
+  {q:"Do you like school?", a:"Yes, I like school. / No, I don't like school very much."},
+  {q:"What time do you go to school?", a:"I go to school at [time] o'clock."},
+  {q:"What do you have for breakfast?", a:"I have [food] for breakfast."},
+  {q:"Do you walk to school?", a:"Yes, I walk to school. / No, I go by bus."},
+  {q:"What is your favourite toy?", a:"My favourite toy is my [toy]."},
+]},
+{level:"A1",topic:"Animals & Colours",qa:[
+  {q:"What animal can you see in this picture?", a:"I can see a [animal]."},
+  {q:"What colour is the elephant?", a:"The elephant is grey."},
+  {q:"How many legs does a dog have?", a:"A dog has four legs."},
+  {q:"Can a bird fly?", a:"Yes, a bird can fly."},
+  {q:"What do cats eat?", a:"Cats eat fish and meat."},
+  {q:"Is a frog green or red?", a:"A frog is green."},
+  {q:"Where do fish live?", a:"Fish live in water."},
+  {q:"What sound does a cow make?", a:"A cow says moo."},
+  {q:"Do you like animals?", a:"Yes, I love animals, especially [animal]."},
+  {q:"What is your favourite animal?", a:"My favourite animal is a [animal]."},
+]},
+// ── A2: Cambridge YLE Movers / Flyers ──────────────────────
+{level:"A2",topic:"Daily Life & Activities",qa:[
+  {q:"What do you do after school?", a:"After school I usually [activity], like playing football or reading."},
+  {q:"What did you do last weekend?", a:"Last weekend I [activity] with my family."},
+  {q:"How often do you watch TV?", a:"I watch TV every day / twice a week."},
+  {q:"What sports do you play?", a:"I play [sport] at school and at the weekend."},
+  {q:"Describe your bedroom.", a:"My bedroom is [size]. I have a bed, a desk and a [item]. It is [colour]."},
+  {q:"What time do you get up in the morning?", a:"I get up at [time] in the morning."},
+  {q:"What is the weather like today?", a:"Today it is [sunny/rainy/cloudy]."},
+  {q:"Do you help at home? What do you do?", a:"Yes, I help at home. I [task], like washing the dishes or tidying my room."},
+  {q:"What do you do at the weekend?", a:"At the weekend I [activity] with my friends or family."},
+  {q:"Tell me about your best friend.", a:"My best friend is [name]. He/She is [age] and we like [activity] together."},
+]},
+{level:"A2",topic:"Likes, Dislikes & Free Time",qa:[
+  {q:"What kind of music do you like?", a:"I like [genre] music. My favourite singer is [name]."},
+  {q:"Do you like reading? What books do you read?", a:"Yes, I enjoy reading [genre] books. My favourite is [title]."},
+  {q:"What is your favourite film?", a:"My favourite film is [title] because it is [adjective]."},
+  {q:"What games do you like playing?", a:"I like playing [game] with my friends."},
+  {q:"Do you prefer summer or winter? Why?", a:"I prefer [season] because [reason]."},
+  {q:"What do you do when it rains?", a:"When it rains I [activity] inside, like reading or watching films."},
+  {q:"Tell me about a trip you went on.", a:"I went to [place] with my [family/class]. We [activity] and it was [adjective]."},
+  {q:"What do you eat for lunch at school?", a:"At school I eat [food] for lunch."},
+  {q:"How do you travel to school?", a:"I travel to school by [transport]."},
+  {q:"What are you good at?", a:"I am good at [subject/activity] because [reason]."},
+]},
+// ── B1: Cambridge PET / Trinity Grade 5-6 ───────────────────
+{level:"B1",topic:"Personal Topics & Opinions",qa:[
+  {q:"Tell me about your hometown. What do you like about it?", a:"I come from [place]. It is a [size] town/city. I like it because [reason], but I think it could be improved by [suggestion]."},
+  {q:"What do you enjoy doing in your free time?", a:"In my free time I enjoy [activity]. I find it relaxing/exciting because [reason]. I do it [frequency]."},
+  {q:"Would you like to live in another country? Why?", a:"Yes, I would love to live in [country] because [reason]. However, I would miss [thing] about my home country."},
+  {q:"Talk about a person who is important to you.", a:"A person who is very important to me is [name]. He/She is [relationship]. I admire them because [reason]."},
+  {q:"What do you think is the best way to learn English?", a:"I think the best way to learn English is to [method], because [reason]. I also find [method] very helpful."},
+  {q:"Describe a typical day in your life.", a:"I usually get up at [time]. I [activity] in the morning. After school I [activity]. In the evening I [activity] before going to bed."},
+  {q:"What do you think about social media?", a:"I think social media can be [positive aspect], but it can also be [negative aspect]. I use it to [purpose]."},
+  {q:"What job would you like to do in the future?", a:"In the future I would like to be a [job] because [reason]. I think I would be good at it because [reason]."},
+  {q:"Talk about a film or book you enjoyed.", a:"I recently [watched/read] [title]. It is about [description]. I enjoyed it because [reason]."},
+  {q:"What is important to you when choosing friends?", a:"When choosing friends I think [quality] is very important. A good friend should [characteristic]. I also value [quality]."},
+]},
+{level:"B1",topic:"Environment & Community",qa:[
+  {q:"What environmental problems are there in your area?", a:"In my area there are problems with [pollution/traffic/litter]. I think the main cause is [cause]. We could solve this by [solution]."},
+  {q:"How do you help the environment?", a:"I try to help the environment by [recycling/saving water/using public transport]. I think it is important because [reason]."},
+  {q:"What changes would you make to improve your local area?", a:"I would [add more parks/improve public transport/open more youth centres] because [reason]. This would benefit [people]."},
+  {q:"Should young people do volunteer work?", a:"Yes, I think young people should volunteer because [reason]. It helps [beneficiary] and it also teaches [skill]."},
+  {q:"What do you think about technology in school?", a:"I think technology in school can be [helpful/distracting]. It helps students [benefit], but teachers should [recommendation]."},
+]},
+// ── B2: Cambridge FCE / IELTS 5.0-6.5 ──────────────────────
+{level:"B2",topic:"Society & Modern Issues",qa:[
+  {q:"What are the advantages and disadvantages of social media?", a:"Social media has several advantages. It allows people to [benefit 1] and [benefit 2]. However, there are also disadvantages such as [risk 1] and [risk 2]. Overall, I believe [opinion]."},
+  {q:"Do you think the internet has changed the way people communicate?", a:"Absolutely. The internet has transformed communication by [change 1]. People now [behaviour]. While this has benefits such as [benefit], it also means [drawback]. In my view, [conclusion]."},
+  {q:"Is it important to learn a foreign language?", a:"Yes, I strongly believe learning a foreign language is essential. Firstly, it [benefit 1]. Furthermore, it [benefit 2]. From a personal perspective, [personal experience]. Therefore, [conclusion]."},
+  {q:"Talk about the role of education in society.", a:"Education plays a fundamental role in society by [function 1] and [function 2]. A well-educated population contributes to [benefit]. However, I think the current system could be improved by [suggestion]."},
+  {q:"What are the effects of globalisation?", a:"Globalisation has had significant effects on [economy/culture/environment]. On the positive side, it has [benefit]. Conversely, it has also led to [negative effect]. In conclusion, [opinion]."},
+  {q:"How has technology changed the way we live?", a:"Technology has dramatically changed many aspects of daily life. For example, [change 1]. Furthermore, in the workplace [change 2]. While this brings many benefits, it also raises concerns about [issue]. Personally, I think [opinion]."},
+  {q:"What do you think about the gap between rich and poor?", a:"The gap between rich and poor is a serious issue. It leads to [consequence 1] and [consequence 2]. Governments should address this by [solution 1] and [solution 2]. I believe [opinion]."},
+  {q:"Should people be more environmentally responsible?", a:"Yes, I firmly believe everyone has a responsibility towards the environment. Each individual can contribute by [action 1] and [action 2]. Governments also have a crucial role in [policy]. Without action, [consequence]."},
+  {q:"How important is physical exercise for young people?", a:"Physical exercise is extremely important for young people. It contributes to [benefit 1] and [benefit 2]. Moreover, regular exercise has been shown to [benefit 3]. I personally [personal habit] and I feel [effect]."},
+  {q:"Describe the ideal city of the future.", a:"My ideal city of the future would be [adjective] and [adjective]. It would have [feature 1] and [feature 2]. Importantly, it would be environmentally sustainable because [reason]. Citizens would enjoy [benefit]."},
+]},
+{level:"B2",topic:"Work, Ambition & Culture",qa:[
+  {q:"What qualities make a good leader?", a:"A good leader should possess several key qualities. First, they need to be [quality 1] in order to [reason]. They should also be [quality 2] and demonstrate [quality 3]. In addition, great leaders [characteristic]. I think [personal opinion]."},
+  {q:"How do cultural differences affect communication?", a:"Cultural differences can significantly impact communication. For example, [example 1]. In some cultures [behaviour] is considered [meaning], while in others it means [different meaning]. Awareness of these differences is crucial for [reason]."},
+  {q:"Is work-life balance important?", a:"Work-life balance is absolutely crucial for [reason 1] and [reason 2]. Without it, people can experience [consequence]. Employers should [recommendation] to help employees maintain balance. Personally, I [opinion]."},
+  {q:"What are the advantages of studying abroad?", a:"Studying abroad offers numerous advantages. Firstly, students gain [benefit 1]. Additionally, they are exposed to [benefit 2]. Experiencing life in a different culture also develops [skill]. However, it can be challenging because [challenge]."},
+  {q:"How can young people prepare for the job market?", a:"Young people can prepare for the job market in several ways. They should focus on [skill 1] and [skill 2]. Work experience is also very valuable because [reason]. Furthermore, networking helps [benefit]."},
+]},
+// ── C1: Cambridge CAE / IELTS 6.5-8 ────────────────────────
+{level:"C1",topic:"IELTS Part 1 — Personal Perspectives",qa:[
+  {q:"Describe your hometown and what makes it unique.", a:"I come from [place], which is a fascinating [city/town/village] located in [region/country]. What makes it particularly unique is [characteristic 1] and [characteristic 2]. The local culture is renowned for [feature], and visitors are often struck by [aspect]. However, like many places, it faces challenges such as [challenge]. On balance, I have a great affection for [place] because [personal reason]."},
+  {q:"How has your daily routine changed over the past few years?", a:"My daily routine has evolved considerably over the past few years. Previously, I used to [old habit], whereas now I tend to [new habit]. This shift has been largely driven by [reason]. I have also become more [adjective] about [aspect]. One significant change has been [specific change], which has had a positive impact on [area of life]."},
+  {q:"In what ways has technology influenced your studies or work?", a:"Technology has had a profound influence on both my studies and professional development. On a practical level, [tool/platform] has enabled me to [benefit]. Furthermore, the ability to [capability] has transformed the way I [activity]. That said, I am mindful of the potential drawbacks, particularly the risk of [concern]. Nevertheless, I believe the net effect has been [positive/transformative/complex]."},
+]},
+{level:"C1",topic:"IELTS Part 2 — Extended Response",qa:[
+  {q:"Describe an experience that changed your perspective on life. You should say: what the experience was, when and where it happened, how it affected you, and explain why it changed your perspective.", a:"I would like to talk about [experience], which had a truly transformative effect on my outlook. This took place [time] when I was [age/context]. At the time, I was [situation]. The experience involved [description], which was both [adjective] and [adjective]. As a result, I found myself reconsidering [belief/value]. In particular, it made me realise that [insight]. Prior to this, I had always assumed that [previous belief], but I came to understand that [new understanding]. This shift in perspective has influenced my approach to [area] in a number of meaningful ways. Looking back, I am genuinely grateful for the experience, despite the challenges it presented."},
+  {q:"Describe a skill you would like to develop and explain why it would benefit you.", a:"The skill I would most like to develop is [skill], primarily because [reason 1] and [reason 2]. At present, my ability in this area is [current level]. I believe that by [method 1] and [method 2], I could make significant progress within [timeframe]. The benefits of acquiring this skill would be considerable. In a professional context, it would enable me to [professional benefit]. On a personal level, [personal benefit]. Furthermore, in an increasingly [adjective] world, [skill] has become an invaluable asset. I have already taken some preliminary steps, such as [action], and I intend to [future plan] in the near future."},
+]},
+{level:"C1",topic:"IELTS Part 3 — Abstract Discussion",qa:[
+  {q:"To what extent do you think governments should be responsible for protecting the environment?", a:"This is a multifaceted issue that merits careful consideration. On one hand, governments have a fundamental duty to enact and enforce environmental legislation, given that many environmental issues transcend individual capability. Without regulatory frameworks, corporations and individuals may prioritise short-term profit over ecological sustainability. On the other hand, it would be a gross oversimplification to suggest that governments should bear sole responsibility. Civil society, the private sector, and individuals each have a crucial role to play. Ultimately, I would argue that a collaborative approach, underpinned by robust government policy, represents the most viable path forward. The key is to establish clear incentives and accountability mechanisms that align economic interests with environmental imperatives."},
+  {q:"How do you think artificial intelligence will affect employment in the coming decades?", a:"The impact of artificial intelligence on the labour market is likely to be profound and, to some degree, disruptive. On a fundamental level, AI is expected to automate a wide range of repetitive and routine tasks, which may render certain roles obsolete. However, it is equally important to acknowledge that technological revolutions have historically generated new categories of employment, even as they have displaced others. The critical question is whether the pace of change will allow workers adequate time to reskill and adapt. I believe the outcome will be largely determined by the degree to which educational institutions, governments, and corporations invest in human capital development. Without proactive policy intervention, the benefits of AI could become disproportionately concentrated among those with advanced technical skills."},
+  {q:"Is it possible to balance economic growth with environmental sustainability?", a:"The apparent tension between economic growth and environmental sustainability is one of the defining challenges of our era. Traditional models of development have frequently come at considerable ecological cost, and there is substantial evidence to suggest that unfettered growth is incompatible with long-term planetary health. Nevertheless, I would contend that this apparent contradiction need not be insurmountable. The concept of a circular economy, for instance, offers a compelling alternative framework in which waste is minimised and resources are used more efficiently. Furthermore, the rapid advancement of renewable energy technologies demonstrates that it is increasingly feasible to decouple economic growth from carbon emissions. What is required, above all, is a fundamental reorientation of policy priorities, consumer behaviour, and corporate strategy, guided by a long-term vision of sustainable prosperity."},
+  {q:"What role does cultural heritage play in shaping national identity?", a:"Cultural heritage occupies a complex and often contested position in the construction of national identity. On the one hand, shared historical narratives, artistic traditions, and collective memory can serve as powerful unifying forces, providing citizens with a sense of continuity and belonging. On the other hand, it is important to recognise that national identity is rarely monolithic; it is typically shaped by multiple, sometimes competing cultural influences. Moreover, the selective emphasis on particular aspects of heritage can, in some circumstances, be used to marginalise minority communities or to serve political agendas. I would therefore argue that while cultural heritage is undeniably significant, its role in shaping national identity should be approached critically and inclusively, with due acknowledgement of diversity and the evolving nature of culture itself."},
+  {q:"Do you think that higher education should be free for all students?", a:"Whether higher education should be free is a question that touches on fundamental values regarding social justice, economic efficiency, and the purpose of education itself. Those in favour of free higher education argue that knowledge and opportunity should not be determined by financial circumstance, and that a more educated workforce ultimately benefits society as a whole. From this perspective, tuition fees represent a significant structural barrier that perpetuates inequality. Conversely, critics contend that free higher education may not be fiscally sustainable, and that a graduate contribution model, whereby students repay costs after securing well-paid employment, represents a more equitable distribution of financial responsibility. Personally, I believe that access to higher education should be determined by merit and aspiration rather than by socioeconomic background. However, the precise funding mechanism will inevitably depend on the economic and political context of each individual country."},
+]},
+];
+
+function renderExam() {
+  if(!currentUser) return;
+  const levelFilter = document.getElementById('examLevelFilter').value;
+  const recs = cache.recordings;
+  const recordedSet = new Set(recs.filter(r=>r.type==='sentence').map(r=>r.word.substring(0,60)));
+  
+  let filtered = EXAM_DATA;
+  if(levelFilter) filtered = EXAM_DATA.filter(d => d.level === levelFilter);
+  
+  const levelColors = {A1:'#10b981',A2:'#3b82f6',B1:'#8b5cf6',B2:'#f59e0b',C1:'#ef4444'};
+  const levelBg = {A1:'#ecfdf5',A2:'#eff6ff',B1:'#f5f3ff',B2:'#fffbeb',C1:'#fef2f2'};
+  
+  let html = '';
+  filtered.forEach((section, si) => {
+    const col = levelColors[section.level] || '#2563eb';
+    const bg  = levelBg[section.level]  || '#f0f4f8';
+    html += `<div style="background:white;border-radius:14px;box-shadow:var(--shadow);margin-bottom:28px;overflow:hidden;">
+      <div style="background:${col};color:white;padding:16px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;">
+        <span style="background:rgba(255,255,255,0.2);padding:4px 14px;border-radius:20px;font-weight:800;font-size:1rem;">${section.level}</span>
+        <span style="font-weight:700;font-size:1.05rem;">📝 ${section.topic}</span>
+        <span style="margin-left:auto;font-size:0.85rem;opacity:0.85;">${section.qa.length} questions</span>
+      </div>
+      <div style="padding:18px 22px;display:grid;gap:14px;">`;
+    
+    section.qa.forEach((item, qi) => {
+      const fullText = 'Q: ' + item.q + ' A: ' + item.a;
+      const shortKey = fullText.substring(0,60);
+      const isRec = recs.some(r => r.word && r.word.substring(0,60) === shortKey);
+      const rec = recs.find(r => r.word && r.word.substring(0,60) === shortKey);
+      const audioUrl = rec ? getAudioUrl(rec.audio_path) : '';
+      const safeQ = item.q.replace(/'/g,"\'");
+      const safeA = item.a.replace(/'/g,"\'");
+      const safeText = ('Q: '+item.q+' A: '+item.a).replace(/'/g,"\'");
+      
+      html += `<div style="background:${bg};border:2px solid ${isRec?col:' var(--border)'};border-radius:10px;padding:16px;">
+        <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+          <span style="background:${col};color:white;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:700;flex-shrink:0;">${section.level} Q${qi+1}</span>
+          ${isRec?`<span style="background:#dcfce7;color:#16a34a;padding:2px 10px;border-radius:12px;font-size:0.78rem;font-weight:700;">✅ Recorded</span>`:''}
+        </div>
+        <div style="background:white;border-left:4px solid ${col};padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:10px;">
+          <div style="font-size:0.78rem;font-weight:700;color:${col};margin-bottom:4px;">❓ QUESTION</div>
+          <div style="font-size:0.97rem;font-weight:600;color:var(--text);">${item.q}</div>
+        </div>
+        <div style="background:white;border-left:4px solid #10b981;padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:12px;">
+          <div style="font-size:0.78rem;font-weight:700;color:#10b981;margin-bottom:4px;">💬 ANSWER (read this)</div>
+          <div style="font-size:0.95rem;color:var(--text);line-height:1.6;">${item.a}</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+          <button class="btn-sm btn-listen" onclick="speak('Question: ${safeQ} Answer: ${safeA}',this)">🔊 Listen</button>
+          <button class="btn-sm btn-record" onclick="startRecording('${safeText.substring(0,200)}','sentence',-1,this)">🎤 Record Q+A</button>
+          <button class="btn-sm btn-play" ${audioUrl?'':'disabled'} data-audio-url="${audioUrl}" onclick="playRecording(this.dataset.audioUrl,this)">▶️ Play</button>
+          ${rec&&rec.score?`<span style="background:#dbeafe;color:#1d4ed8;padding:3px 10px;border-radius:12px;font-size:0.82rem;font-weight:700;">${rec.score}%</span>`:''}
+        </div>
+      </div>`;
+    });
+    html += '</div></div>';
+  });
+  
+  if(!html) html = '<div style="padding:40px;text-align:center;color:var(--muted);background:white;border-radius:14px;">Select a level to see exam questions.</div>';
+  document.getElementById('examContainer').innerHTML = html;
+}
+
 </script>
 </body>
 </html>
