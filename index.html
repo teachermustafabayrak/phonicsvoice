@@ -1153,70 +1153,304 @@ function getSectionContent(cat, sound) {
 
 
 // ============================================================
-// SPEECH RECOGNITION + SCORING
+// SPEECH RECOGNITION + SMART SCORING ENGINE v2.0
 // ============================================================
 let recogResult = '';
+let recogFinal = '';   // stores the FINAL (non-interim) transcript
 
-// Start speech recognition alongside recording
 function startSpeechRecognition() {
   recogResult = '';
+  recogFinal  = '';
   window._lastTranscript = '';
+  window._lastFinalTranscript = '';
   const SRClass = window.SpeechRecognition || window.webkitSpeechRecognition;
   if(!SRClass) return null;
   const recog = new SRClass();
-  recog.continuous = true;
+  recog.continuous    = true;
   recog.interimResults = true;
+  recog.maxAlternatives = 3;
   recog.lang = 'en-US';
   recog.onresult = (e) => {
-    let t = '';
-    for(let i=0; i<e.results.length; i++) t += e.results[i][0].transcript + ' ';
-    recogResult = t.trim().toLowerCase();
+    let interim = '', final = '';
+    for(let i = e.resultIndex; i < e.results.length; i++) {
+      const t = e.results[i][0].transcript;
+      if(e.results[i].isFinal) final += t + ' ';
+      else interim += t + ' ';
+    }
+    if(final) {
+      recogFinal += final;
+      window._lastFinalTranscript = recogFinal.trim().toLowerCase();
+    }
+    recogResult = (recogFinal + interim).trim().toLowerCase();
     window._lastTranscript = recogResult;
   };
-  recog.onerror = () => {};
+  recog.onerror = (e) => {
+    // silently handle — some errors (aborted, no-speech) are normal
+    console.log('Speech recognition event:', e.error);
+  };
   try { recog.start(); return recog; } catch(e) { return null; }
 }
 
-// Score based on text similarity
-function scoreRecording(expected, type, transcript) {
-  if(!transcript || transcript.length < 2) {
-    // No transcript — give a base score with some variation
-    const base = type === 'word' ? 60 : 55;
-    return base + Math.floor(Math.random() * 20);
+// ─────────────────────────────────────────────
+// TEXT NORMALIZER
+// Expands contractions, removes punctuation,
+// lowercases everything for fair comparison
+// ─────────────────────────────────────────────
+function normalizeText(t) {
+  if(!t) return '';
+  let s = t.toLowerCase();
+  // Expand common contractions
+  const contractions = {
+    "i'm":"i am","you're":"you are","he's":"he is","she's":"she is",
+    "it's":"it is","we're":"we are","they're":"they are",
+    "i've":"i have","you've":"you have","we've":"we have","they've":"they have",
+    "i'd":"i would","you'd":"you would","he'd":"he would","she'd":"she would",
+    "we'd":"we would","they'd":"they would",
+    "i'll":"i will","you'll":"you will","he'll":"he will","she'll":"she will",
+    "we'll":"we will","they'll":"they will",
+    "isn't":"is not","aren't":"are not","wasn't":"was not","weren't":"were not",
+    "hasn't":"has not","haven't":"have not","hadn't":"had not",
+    "doesn't":"does not","don't":"do not","didn't":"did not",
+    "won't":"will not","wouldn't":"would not","can't":"cannot","couldn't":"could not",
+    "shouldn't":"should not","mustn't":"must not","needn't":"need not",
+    "gonna":"going to","wanna":"want to","gotta":"got to",
+    "kinda":"kind of","sorta":"sort of","lotta":"lot of"
+  };
+  for(const [k,v] of Object.entries(contractions)) {
+    s = s.replace(new RegExp('\\b'+k+'\\b','g'), v);
   }
-  const exp = expected.toLowerCase().replace(/[^a-z0-9 ]/g,' ').trim();
-  const got = transcript.toLowerCase().replace(/[^a-z0-9 ]/g,' ').trim();
-
-  if(type === 'word') {
-    // Single word: check if the word appears in transcript
-    if(got.includes(exp)) return 90 + Math.floor(Math.random()*10);
-    // Check first few chars match
-    const similarity = charSimilarity(exp, got);
-    return Math.max(30, Math.min(95, Math.round(similarity * 100)));
-  } else {
-    // Sentence/paragraph: word overlap score
-    const expWords = exp.split(/\s+/).filter(w=>w.length>2);
-    const gotWords = got.split(/\s+/);
-    if(expWords.length === 0) return 65;
-    let matches = 0;
-    expWords.forEach(w => { if(gotWords.some(g => g.includes(w)||w.includes(g))) matches++; });
-    const ratio = matches / expWords.length;
-    const raw = Math.round(ratio * 100);
-    // Add small variation
-    const variation = Math.floor(Math.random()*8) - 3;
-    return Math.max(25, Math.min(98, raw + variation));
-  }
+  // Remove punctuation except spaces
+  s = s.replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+  return s;
 }
 
-function charSimilarity(a, b) {
-  if(!a || !b) return 0;
-  const longer = a.length > b.length ? a : b;
-  const shorter = a.length > b.length ? b : a;
-  let matches = 0;
-  for(let i=0; i<shorter.length; i++) {
-    if(longer.includes(shorter[i])) matches++;
+// ─────────────────────────────────────────────
+// STOP WORDS — ignored in keyword scoring
+// ─────────────────────────────────────────────
+const STOP_WORDS = new Set([
+  'a','an','the','i','you','he','she','it','we','they','my','your','his','her',
+  'our','their','its','this','that','these','those','am','is','are','was','were',
+  'be','been','being','do','does','did','to','of','in','on','at','by','for',
+  'with','from','up','about','into','through','during','and','or','but','if',
+  'as','so','than','very','just','also','here','there','then','now','too'
+]);
+
+// ─────────────────────────────────────────────
+// PHONETIC SIMILARITY (Double Metaphone light)
+// Maps similar-sounding sounds to same code
+// ─────────────────────────────────────────────
+function phoneticCode(word) {
+  if(!word) return '';
+  let w = word.toLowerCase()
+    .replace(/ph/g,'f').replace(/ck/g,'k').replace(/gh/g,'g')
+    .replace(/kn/g,'n').replace(/wr/g,'r').replace(/wh/g,'w')
+    .replace(/[aeiou]/g,'a')   // vowels all → 'a'
+    .replace(/([bcdfghjklmnpqrstvwxyz])\1+/g,'$1') // deduplicate consonants
+    .replace(/[^a-z]/g,'');
+  // First char matters most
+  return w.substring(0,6);
+}
+
+function phoneticSimilarity(a, b) {
+  const ca = phoneticCode(a);
+  const cb = phoneticCode(b);
+  if(!ca || !cb) return 0;
+  if(ca === cb) return 1.0;
+  // Count matching prefix
+  let match = 0;
+  const len = Math.min(ca.length, cb.length);
+  for(let i=0; i<len; i++) { if(ca[i]===cb[i]) match++; else break; }
+  return match / Math.max(ca.length, cb.length);
+}
+
+// ─────────────────────────────────────────────
+// LEVENSHTEIN DISTANCE (for fuzzy word matching)
+// ─────────────────────────────────────────────
+function levenshtein(a, b) {
+  if(!a) return b.length;
+  if(!b) return a.length;
+  const m = a.length, n = b.length;
+  const dp = Array.from({length:m+1},(_,i)=>Array.from({length:n+1},(_,j)=>i?j?0:i:j));
+  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++)
+    dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+function wordSimilarity(a, b) {
+  if(a===b) return 1.0;
+  if(a.includes(b) || b.includes(a)) return 0.9;
+  const maxLen = Math.max(a.length, b.length);
+  if(maxLen===0) return 1;
+  const lev = levenshtein(a,b);
+  const levScore = 1 - (lev / maxLen);
+  const phon = phoneticSimilarity(a,b);
+  return Math.max(levScore, phon * 0.85);
+}
+
+// ─────────────────────────────────────────────
+// KEYWORD EXTRACTOR
+// Returns important words (non-stop-words)
+// with weights: longer & rarer = more important
+// ─────────────────────────────────────────────
+function extractKeywords(text) {
+  const words = normalizeText(text).split(/\s+/).filter(w => w.length>1);
+  return words.filter(w => !STOP_WORDS.has(w));
+}
+
+// ─────────────────────────────────────────────
+// MAIN SCORING FUNCTION
+// ─────────────────────────────────────────────
+function scoreRecording(expected, type, transcript) {
+  // ── Use final transcript if available, else interim ──
+  const raw = (window._lastFinalTranscript || transcript || '').trim();
+
+  // ── No speech detected at all ──
+  if(!raw || raw.length < 1) {
+    return 0;  // No speech = 0, not a fake 60+
   }
-  return matches / longer.length;
+
+  const expNorm = normalizeText(expected);
+  const gotNorm = normalizeText(raw);
+  const expWords = expNorm.split(/\s+/).filter(w=>w.length>0);
+  const gotWords = gotNorm.split(/\s+/).filter(w=>w.length>0);
+
+  // ───────────────────────────────────────────
+  // SINGLE WORD SCORING (phonics words)
+  // Most precise — phonetic + levenshtein
+  // ───────────────────────────────────────────
+  if(type === 'word') {
+    const expWord = expNorm.split(/\s+/)[0]; // target word
+    if(!expWord) return 0;
+
+    // Best match across all spoken words
+    let bestScore = 0;
+    for(const spokenWord of gotWords) {
+      const sim = wordSimilarity(expWord, spokenWord);
+      if(sim > bestScore) bestScore = sim;
+    }
+
+    // Also check if full phrase spoken contains the word
+    if(gotNorm.includes(expWord)) bestScore = Math.max(bestScore, 1.0);
+
+    // Convert to 0-100 with fair thresholds
+    let score;
+    if(bestScore >= 0.95) score = 92 + Math.floor(Math.random()*8);       // 92-99: perfect
+    else if(bestScore >= 0.85) score = 80 + Math.floor(Math.random()*12); // 80-91: very good
+    else if(bestScore >= 0.70) score = 65 + Math.floor(Math.random()*15); // 65-79: good
+    else if(bestScore >= 0.55) score = 45 + Math.floor(Math.random()*20); // 45-64: ok
+    else if(bestScore >= 0.35) score = 25 + Math.floor(Math.random()*20); // 25-44: needs work
+    else score = 10 + Math.floor(Math.random()*15);                        // 10-24: very wrong
+    return score;
+  }
+
+  // ───────────────────────────────────────────
+  // SENTENCE / PARAGRAPH SCORING
+  // Keyword-based: checks important words only
+  // ───────────────────────────────────────────
+  if(type === 'sentence') {
+    const keywords = extractKeywords(expNorm);
+    if(keywords.length === 0) {
+      // Fallback to full word overlap
+      return scoreByWordOverlap(expWords, gotWords);
+    }
+
+    let totalScore = 0;
+    let totalWeight = 0;
+
+    for(const kw of keywords) {
+      // Weight: longer words matter more
+      const weight = Math.max(1, kw.length - 2);
+      totalWeight += weight;
+
+      // Find best match in spoken words
+      let bestMatch = 0;
+      for(const gw of gotWords) {
+        const sim = wordSimilarity(kw, gw);
+        if(sim > bestMatch) bestMatch = sim;
+      }
+      // Also check if keyword appears as substring
+      if(gotNorm.includes(kw)) bestMatch = Math.max(bestMatch, 1.0);
+
+      totalScore += bestMatch * weight;
+    }
+
+    const ratio = totalWeight > 0 ? totalScore / totalWeight : 0;
+
+    // Bonus for overall coverage (how many words spoken vs expected)
+    const coverageRatio = Math.min(1, gotWords.length / Math.max(1, expWords.length));
+    const coverageBonus = coverageRatio > 0.8 ? 5 : coverageRatio > 0.5 ? 2 : 0;
+
+    const raw_score = Math.round(ratio * 100) + coverageBonus;
+    return Math.max(5, Math.min(99, raw_score));
+  }
+
+  // ───────────────────────────────────────────
+  // EXAM PRACTICE SCORING (Q+A format)
+  // Extracts key concepts — ignores filler words
+  // Model answer has [placeholders] — handled
+  // ───────────────────────────────────────────
+  // Remove placeholder patterns like [your name], [age], [city]
+  const cleanExpected = expNorm.replace(/\[.*?\]/g,'').replace(/\s+/g,' ').trim();
+  const cleanKeywords = extractKeywords(cleanExpected);
+
+  if(cleanKeywords.length === 0) {
+    return scoreByWordOverlap(expWords, gotWords);
+  }
+
+  // For exam practice, require at least 30% of keywords + structure words
+  let matched = 0;
+  let partialMatched = 0;
+
+  for(const kw of cleanKeywords) {
+    let best = 0;
+    for(const gw of gotWords) {
+      const sim = wordSimilarity(kw, gw);
+      if(sim > best) best = sim;
+    }
+    if(gotNorm.includes(kw)) best = 1.0;
+    if(best >= 0.9) matched++;
+    else if(best >= 0.6) partialMatched += 0.6;
+  }
+
+  const total = cleanKeywords.length;
+  const score_ratio = (matched + partialMatched) / total;
+
+  // Exam practice: reward fluency (length of response matters)
+  const lengthScore = Math.min(1, gotWords.length / Math.max(5, cleanKeywords.length * 1.5));
+
+  const finalRatio = (score_ratio * 0.7) + (lengthScore * 0.3);
+  const examScore = Math.round(finalRatio * 100);
+
+  // Exam: minimum 10 if something was said, max 99
+  return Math.max(10, Math.min(99, examScore));
+}
+
+// ─────────────────────────────────────────────
+// HELPER: pure word overlap (fallback)
+// ─────────────────────────────────────────────
+function scoreByWordOverlap(expWords, gotWords) {
+  if(!expWords.length) return 0;
+  let matches = 0;
+  for(const ew of expWords) {
+    if(STOP_WORDS.has(ew)) continue;
+    for(const gw of gotWords) {
+      if(wordSimilarity(ew,gw) >= 0.8) { matches++; break; }
+    }
+  }
+  const contentWords = expWords.filter(w=>!STOP_WORDS.has(w)).length || 1;
+  return Math.max(5, Math.min(99, Math.round((matches/contentWords)*100)));
+}
+
+// ─────────────────────────────────────────────
+// SCORE LABEL + COLOR
+// ─────────────────────────────────────────────
+function getScoreLabel(score) {
+  if(score >= 90) return { label:'Excellent! 🌟', color:'#15803d', bg:'#dcfce7' };
+  if(score >= 75) return { label:'Great! 👏',     color:'#1d4ed8', bg:'#dbeafe' };
+  if(score >= 60) return { label:'Good 👍',        color:'#0369a1', bg:'#e0f2fe' };
+  if(score >= 45) return { label:'Needs Work 💪',  color:'#a16207', bg:'#fef9c3' };
+  if(score >= 25) return { label:'Try Again 🔄',   color:'#c2410c', bg:'#fff7ed' };
+  return           { label:'Very Wrong ❌',         color:'#dc2626', bg:'#fee2e2' };
 }
 
 
@@ -1705,9 +1939,15 @@ async function startRecording(word, type, sectionIndex, btn) {
       const dbErr = insR.ok ? null : _ins;
       if(dbErr) { console.error('DB insert error:', dbErr); }
 
-      // 3. Score the recording using text similarity
-      const recScore = scoreRecording(word, type, window._lastTranscript || '');
+      // 3. Score the recording using smart scoring engine
+      const rawTranscript = window._lastFinalTranscript || window._lastTranscript || '';
       window._lastTranscript = '';
+      window._lastFinalTranscript = '';
+      const recScore = scoreRecording(word, type, rawTranscript);
+      if(!rawTranscript || rawTranscript.length < 1) {
+        // Speech not detected — warn but still save recording
+        showToast('⚠️ Microphone picked up no speech. Use Chrome for best results.', 'error');
+      }
       // Update score in DB
       if(savedRec?.id) {
         fetch(`${SB_URL}/rest/v1/recordings?id=eq.${savedRec.id}`, {
@@ -1734,10 +1974,19 @@ async function startRecording(word, type, sectionIndex, btn) {
         const playBtn   = card.querySelector('.btn-play');
         if(playBtn) { playBtn.disabled = false; playBtn.dataset.audioUrl = audioUrl; }
         const scoreBadge = card.querySelector('.word-score');
-        if(scoreBadge) { scoreBadge.className = 'word-score score-done'; scoreBadge.textContent = '✓'; }
+        if(scoreBadge) {
+          const sl2 = getScoreLabel(recScore);
+          scoreBadge.className = 'word-score score-done';
+          scoreBadge.textContent = recScore + '%';
+          scoreBadge.style.background = sl2.bg;
+          scoreBadge.style.color = sl2.color;
+          scoreBadge.style.minWidth = '48px';
+          scoreBadge.style.textAlign = 'center';
+        }
       }
 
-      showToast('✅ Saved to cloud! Tap ▶️ Play to hear yourself.', 'success');
+      const sl = getScoreLabel(recScore);
+      showToast('✅ Score: ' + recScore + '% — ' + sl.label, 'success');
       refreshDashboard();
       renderRecordings();
       renderProgress();
@@ -1960,7 +2209,7 @@ async function renderRecordings() {
         <div class="rec-date">${new Date(r.recorded_at||r.timestamp).toLocaleDateString()}<br/>
           ${new Date(r.recorded_at||r.timestamp).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
         <div class="rec-actions">
-          <span class="rec-score ${r.score>=70?'score-a':r.score>=50?'score-b':'score-na'}">${r.score ? r.score+'%' : 'Pending'}</span>
+          <span class="rec-score ${r.score>=90?'score-a':r.score>=75?'score-a':r.score>=60?'score-b':r.score>=45?'score-c':'score-na'}">${r.score ? r.score+'%' : 'Pending'}</span>
           <button class="btn-sm btn-play" ${audioUrl?'':'disabled'} onclick="playRecording('${audioUrl}',this)">▶️ Play</button>
           <button class="btn-sm btn-listen" onclick="speak('${r.word.substring(0,80).replace(/'/g,"\\'")}',this)">🔊 Hear</button>
         </div>
@@ -2159,7 +2408,7 @@ async function renderAdminTable() {
         </div>
       </td>
       <td>${u.sentsRec}/${sentencesData.length}</td>
-      <td><span class="rec-score ${u.score>=70?'score-a':u.score>=40?'score-b':'score-na'}">${u.score}%</span></td>
+      <td><span class="rec-score ${u.score>=75?'score-a':u.score>=50?'score-b':u.score>=25?'score-c':'score-na'}">${u.score}%</span></td>
       <td style="color:var(--muted);font-size:0.82rem">${u.lastActive?new Date(u.lastActive).toLocaleDateString():'—'}</td>
       <td style='display:flex;gap:6px;'><button class="btn-view" onclick="viewStudent('${u.id}')">View</button><button style='padding:5px 10px;background:#fee2e2;color:#dc2626;border:none;border-radius:6px;font-size:0.8rem;font-weight:600;cursor:pointer;' onclick="deleteStudent('${u.id}','${u.name}')">🗑️</button></td>
     </tr>`).join('');
@@ -2462,9 +2711,9 @@ function renderExam() {
         </div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
           <button class="btn-sm btn-listen" onclick="speak('Question: ${safeQ} Answer: ${safeA}',this)">🔊 Listen</button>
-          <button class="btn-sm btn-record" onclick="startRecording('${safeText.substring(0,200)}','sentence',-1,this)">🎤 Record Q+A</button>
+          <button class="btn-sm btn-record" onclick="startRecording('${safeText}','sentence',-1,this)">🎤 Record Q+A</button>
           <button class="btn-sm btn-play" ${audioUrl?'':'disabled'} data-audio-url="${audioUrl}" onclick="playRecording(this.dataset.audioUrl,this)">▶️ Play</button>
-          ${rec&&rec.score?`<span style="background:#dbeafe;color:#1d4ed8;padding:3px 10px;border-radius:12px;font-size:0.82rem;font-weight:700;">${rec.score}%</span>`:''}
+          ${rec&&rec.score?(()=>{const sl=getScoreLabel(rec.score);return `<span style="background:${sl.bg};color:${sl.color};padding:3px 10px;border-radius:12px;font-size:0.82rem;font-weight:700;">${rec.score}% — ${sl.label}</span>`;})():''}
         </div>
       </div>`;
     });
